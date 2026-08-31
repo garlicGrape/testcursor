@@ -1,15 +1,19 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { emptyProgress } from "@/lib/game";
+import { applyProgressAction, loadProgress, saveProgress, type ProgressAction } from "@/lib/clientProgress";
 import type { PatternId, Progress } from "@/data/types";
 
 type ProgressContextValue = {
   progress: Progress;
   ready: boolean;
   refresh: () => Promise<void>;
-  act: (body: Record<string, unknown>) => Promise<Record<string, unknown>>;
-  solve: (problemId: string, opts?: { hintsUsed?: number; peekedSolution?: boolean; localPass?: boolean }) => Promise<Record<string, unknown>>;
+  act: (body: ProgressAction) => Promise<Record<string, unknown>>;
+  solve: (
+    problemId: string,
+    opts?: { hintsUsed?: number; peekedSolution?: boolean; localPass?: boolean },
+  ) => Promise<Record<string, unknown>>;
   study: (patternId: PatternId) => Promise<void>;
   openResource: (resourceId: string) => Promise<void>;
   finishQuest: (questId: string) => Promise<void>;
@@ -20,10 +24,13 @@ const Ctx = createContext<ProgressContextValue | null>(null);
 export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const [progress, setProgress] = useState<Progress>(emptyProgress);
   const [ready, setReady] = useState(false);
+  const ref = useRef(progress);
+  ref.current = progress;
 
   const refresh = useCallback(async () => {
-    const res = await fetch("/api/progress", { cache: "no-store" });
-    setProgress(await res.json());
+    const next = loadProgress();
+    ref.current = next;
+    setProgress(next);
     setReady(true);
   }, []);
 
@@ -31,15 +38,12 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  const act = useCallback(async (body: Record<string, unknown>) => {
-    const res = await fetch("/api/progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (data.progress) setProgress(data.progress);
-    return data as Record<string, unknown>;
+  const act = useCallback(async (body: ProgressAction) => {
+    const { progress: next, extra } = applyProgressAction(ref.current, body);
+    ref.current = next;
+    saveProgress(next);
+    setProgress(next);
+    return extra;
   }, []);
 
   const value = useMemo<ProgressContextValue>(
