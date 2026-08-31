@@ -11,24 +11,27 @@ export default function PracticePage() {
   const { progress } = useProgress();
   const [difficulty, setDifficulty] = useState<Difficulty | "all">("all");
   const [pattern, setPattern] = useState<PatternId | "all">("all");
+  const [list, setList] = useState<"all" | "user" | "core">("all");
   const [status, setStatus] = useState<"all" | "todo" | "done">("all");
 
   const rows = useMemo(() => {
     return PROBLEMS.filter((p) => {
       if (difficulty !== "all" && p.difficulty !== difficulty) return false;
       if (pattern !== "all" && p.pattern !== pattern) return false;
+      if (list === "user" && !p.fromUserList) return false;
+      if (list === "core" && p.fromUserList) return false;
       const done = Boolean(progress.solved[p.id]);
       if (status === "todo" && done) return false;
       if (status === "done" && !done) return false;
       return true;
     });
-  }, [difficulty, pattern, progress.solved, status]);
+  }, [difficulty, list, pattern, progress.solved, status]);
 
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-4xl">Practice</h1>
       <p className="mt-2 max-w-2xl text-paper/65">
-        Original prompts mapped to the LeetCode problems interviewers actually ask. Local ones run with{" "}
+        Core interview patterns plus the 19-problem sheet you added. Local ones run with{" "}
         <code className="font-mono text-gold-200">python -m dojo solve &lt;id&gt;</code>.
       </p>
       <div className="mt-6 flex flex-wrap gap-2">
@@ -56,6 +59,15 @@ export default function PracticePage() {
         </select>
         <select
           className="rounded-md border border-violet-500/30 bg-ink-900 px-3 py-2 font-mono text-sm"
+          value={list}
+          onChange={(e) => setList(e.target.value as "all" | "user" | "core")}
+        >
+          <option value="all">All lists</option>
+          <option value="user">Your list (19)</option>
+          <option value="core">Core catalog</option>
+        </select>
+        <select
+          className="rounded-md border border-violet-500/30 bg-ink-900 px-3 py-2 font-mono text-sm"
           value={status}
           onChange={(e) => setStatus(e.target.value as "all" | "todo" | "done")}
         >
@@ -75,6 +87,9 @@ export default function PracticePage() {
                 <span className="font-mono text-[11px] uppercase text-paper/45">{p.difficulty}</span>
                 <span className="font-mono text-[11px] text-violet-300">{p.pattern}</span>
                 <span className="font-mono text-[11px] text-gold-400">{p.xp} XP</span>
+                {p.fromUserList && (
+                  <span className="rounded-full bg-gold-400/15 px-2 py-0.5 font-mono text-[10px] text-gold-200">your list</span>
+                )}
                 {p.local && <span className="rounded-full bg-violet-600/30 px-2 py-0.5 font-mono text-[10px]">local tests</span>}
               </Link>
             </li>

@@ -14,7 +14,7 @@ export type PatternId =
   | "intervals"
   | "backtracking";
 
-export type Track = "core" | "data-science" | "mle" | "sql";
+export type Track = "core" | "data-science" | "mle" | "sql" | "user-list";
 
 export interface Example {
   input: string;
@@ -29,7 +29,8 @@ export interface Problem {
   pattern: PatternId;
   patterns: PatternId[];
   track: Track[];
-  leetcode: { number: number; slug: string };
+  leetcode?: { number: number; slug: string };
+  fromUserList?: boolean;
   xp: number;
   estimatedMinutes: number;
   local: boolean;

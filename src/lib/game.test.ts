@@ -92,3 +92,35 @@ describe("daily quests", () => {
     expect(a.map((q) => q.id)).toEqual(b.map((q) => q.id));
   });
 });
+
+describe("user interview sheet", () => {
+  it("adds 19 unique problems from the photo list", () => {
+    const sheet = PROBLEMS.filter((p) => p.fromUserList);
+    expect(sheet).toHaveLength(19);
+    const ids = PROBLEMS.map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(sheet.map((p) => p.title)).toEqual(
+      expect.arrayContaining([
+        "Implement Time Counters",
+        "Bishop",
+        "Creating a maze",
+        "Letter Dice",
+        "Closest C numbers in a BST",
+        "Majority Value",
+        "Abbreviations",
+        "Merge",
+        "RateLimiter",
+        "Pots of gold",
+        "Friend suggest",
+        "StockMarket 2 transactions",
+        "Bounded sort",
+        "Encoding using RLE",
+        "Partition into palindromes",
+        "Find all words in a string. Then do it on a Google scale.",
+        "Minimizing work days",
+        "Print all rotationally symmetric numbers less than N",
+        "Number of no contiguous substring matches",
+      ]),
+    );
+  });
+});

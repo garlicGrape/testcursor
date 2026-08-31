@@ -80,9 +80,11 @@ def cmd_solve(ns: argparse.Namespace) -> None:
     problem = _problem(ns.problem)
     folder = ROOT / "problems" / ns.problem
     if not problem.get("local") or not folder.exists():
-        print(f"{ns.problem} is tracked on LeetCode only.")
-        print(f"https://leetcode.com/problems/{problem.get('leetcode', {}).get('slug', '')}/")
-        print("After you pass it there, mark it solved in the dashboard (Practice → problem → I solved it).")
+        print(f"{ns.problem} is not a local pytest problem.")
+        slug = (problem.get("leetcode") or {}).get("slug")
+        if slug:
+            print(f"Closest LeetCode drill: https://leetcode.com/problems/{slug}/")
+        print("Mark it solved in the dashboard (Practice → problem → I solved it).")
         return
     result = subprocess.run(
         [sys.executable, "-m", "pytest", str(folder), "-q"],

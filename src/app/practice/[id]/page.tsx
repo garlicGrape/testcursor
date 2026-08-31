@@ -19,7 +19,6 @@ export default function ProblemPage() {
   }
 
   const record = progress.solved[problem.id];
-  const lc = `https://leetcode.com/problems/${problem.leetcode.slug}/`;
 
   async function mark(localPass: boolean) {
     const data = await solve(problem.id, { hintsUsed: hintsOpen, peekedSolution: peeked, localPass });
@@ -34,7 +33,9 @@ export default function ProblemPage() {
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.35fr_0.9fr]">
       <article className="rounded-2xl bg-paper p-6 text-ink-950 shadow-dojo md:p-8">
         <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-violet-700">
-          LC {problem.leetcode.number} · {problem.difficulty} · {problem.pattern}
+          {problem.leetcode ? `LC ${problem.leetcode.number} · ` : ""}
+          {problem.difficulty} · {problem.pattern}
+          {problem.fromUserList ? " · your list" : ""}
         </p>
         <h1 className="mt-2 font-display text-4xl">{problem.title}</h1>
         <p className="mt-4 whitespace-pre-wrap leading-relaxed">{problem.prompt}</p>
@@ -59,9 +60,18 @@ export default function ProblemPage() {
         <section className="rounded-2xl border border-violet-500/25 bg-ink-900/70 p-5">
           <h2 className="font-display text-2xl">Interview note</h2>
           <p className="mt-2 text-sm text-paper/70">{problem.interviewNote}</p>
-          <a href={lc} target="_blank" rel="noreferrer" className="mt-3 inline-block font-mono text-xs text-gold-400">
-            Open on LeetCode ↗
-          </a>
+          {problem.leetcode ? (
+            <a
+              href={`https://leetcode.com/problems/${problem.leetcode.slug}/`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-block font-mono text-xs text-gold-400"
+            >
+              Closest LeetCode drill ↗
+            </a>
+          ) : (
+            <p className="mt-3 font-mono text-xs text-paper/50">No 1:1 LeetCode twin — practice it here.</p>
+          )}
           {problem.local && (
             <p className="mt-3 font-mono text-xs text-paper/55">
               Local: problems/{problem.id}/solution.py
