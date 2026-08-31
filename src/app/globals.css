@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: #0b0714;
+  color: #f3ede0;
+}
+
+.grain {
+  background-image: radial-gradient(rgba(243, 237, 224, 0.04) 0.6px, transparent 0.6px);
+  background-size: 3px 3px;
+}
+
+.hud-bar {
+  background: linear-gradient(90deg, #e2b857, #f3e0a8 55%, #8b5cf6);
+}
