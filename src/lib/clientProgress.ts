@@ -8,6 +8,7 @@ import {
   recordSolve,
   recordStudy,
   recordCoach,
+  withDailyPin,
 } from "@/lib/game";
 
 export const PROGRESS_KEY = "interview-dojo-progress";
@@ -24,7 +25,7 @@ export function loadProgress(): Progress {
   if (typeof window === "undefined") return emptyProgress();
   try {
     const raw = window.localStorage.getItem(PROGRESS_KEY);
-    return raw ? { ...emptyProgress(), ...JSON.parse(raw) } : emptyProgress();
+    return raw ? withDailyPin({ ...emptyProgress(), ...JSON.parse(raw) }) : withDailyPin(emptyProgress());
   } catch {
     return emptyProgress();
   }
@@ -38,33 +39,42 @@ export function applyProgressAction(
   progress: Progress,
   body: ProgressAction,
 ): { progress: Progress; extra: Record<string, unknown> } {
+  const pinned = withDailyPin(progress);
   if (body.action === "solve") {
     const problem = PROBLEM_BY_ID[body.problemId];
-    if (!problem) return { progress, extra: { error: "unknown problem" } };
-    const result = recordSolve(progress, problem, {
+    if (!problem) return { progress: pinned, extra: { error: "unknown problem" } };
+    const result = recordSolve(pinned, problem, {
       hintsUsed: body.hintsUsed ?? 0,
       peekedSolution: Boolean(body.peekedSolution),
       localPass: Boolean(body.localPass),
     });
+    const questXp = result.claimedQuests.reduce((sum, q) => sum + q.xp, 0);
     return {
       progress: result.progress,
-      extra: { xpEarned: result.xpEarned, firstSolve: result.firstSolve, newly: result.newly },
+      extra: {
+        xpEarned: result.xpEarned + questXp,
+        firstSolve: result.firstSolve,
+        newly: result.newly,
+        claimedQuests: result.claimedQuests.map((q) => q.title),
+      },
     };
   }
   if (body.action === "study") {
-    return { progress: recordStudy(progress, body.patternId), extra: {} };
+    return { progress: recordStudy(pinned, body.patternId), extra: {} };
   }
   if (body.action === "resource") {
-    return { progress: recordResource(progress, body.resourceId), extra: {} };
+    return { progress: recordResource(pinned, body.resourceId), extra: {} };
   }
   if (body.action === "quest") {
-    return { progress: completeQuest(progress, body.questId), extra: {} };
+    const before = pinned.xp;
+    const next = completeQuest(pinned, body.questId);
+    return { progress: next, extra: { awarded: next.xp > before } };
   }
   if (body.action === "review") {
-    return { progress: recordReview(progress), extra: {} };
+    return { progress: recordReview(pinned), extra: {} };
   }
   if (body.action === "coach") {
-    return { progress: recordCoach(progress), extra: {} };
+    return { progress: recordCoach(pinned), extra: {} };
   }
-  return { progress, extra: { error: "unknown action" } };
+  return { progress: pinned, extra: { error: "unknown action" } };
 }

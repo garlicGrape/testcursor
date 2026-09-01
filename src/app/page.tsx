@@ -8,7 +8,7 @@ import { dailyQuests, isQuestDone, patternMastery, rankForLevel, recommendedProb
 import { useProgress } from "@/components/ProgressProvider";
 
 export default function BoardPage() {
-  const { progress, ready, finishQuest } = useProgress();
+  const { progress, ready } = useProgress();
   const quests = dailyQuests(progress);
   const rec = recommendedProblem(progress);
   const mastery = patternMastery(progress);
@@ -51,17 +51,13 @@ export default function BoardPage() {
               <p className="mt-2 text-sm text-paper/65">{q.detail}</p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <Link href={q.href} className="rounded-md bg-violet-600 px-3 py-1.5 font-mono text-xs text-white">
-                  Open
+                  {done ? "Review" : "Open"}
                 </Link>
-                <button
-                  type="button"
-                  disabled={done || !ready}
-                  onClick={() => void finishQuest(q.id)}
-                  className="rounded-md border border-paper/20 px-3 py-1.5 font-mono text-xs disabled:opacity-40"
-                >
-                  {done ? "Claimed" : `Claim +${q.xp} XP`}
-                </button>
+                <span className={`font-mono text-xs ${done ? "text-gold-400" : "text-paper/45"}`}>
+                  {done ? `Earned +${q.xp} XP` : `+${q.xp} XP after you finish`}
+                </span>
               </div>
+              {!done && <p className="mt-2 text-xs text-paper/45">{q.how}</p>}
             </article>
           );
         })}

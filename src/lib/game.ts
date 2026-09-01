@@ -1,6 +1,6 @@
 import { ACHIEVEMENTS, DIFFICULTY_XP, PATTERNS, RANKS, XP_PER_LEVEL } from "@/data/types";
-import type { PatternId, Problem, Progress, Rank, SolveRecord } from "@/data/types";
-import { PROBLEMS } from "@/data/problems";
+import type { DailyPin, PatternId, Problem, Progress, Rank, SolveRecord } from "@/data/types";
+import { PROBLEMS, PROBLEM_BY_ID } from "@/data/problems";
 
 export function emptyProgress(): Progress {
   return {
@@ -12,6 +12,7 @@ export function emptyProgress(): Progress {
     resourcesRead: [],
     achievements: [],
     questLog: {},
+    daily: {},
     reviewCount: 0,
     coachSessions: 0,
   };
@@ -128,18 +129,21 @@ export function recordSolve(
   progress: Progress,
   problem: Problem,
   opts: { hintsUsed: number; peekedSolution: boolean; localPass: boolean; now?: Date },
-): { progress: Progress; xpEarned: number; firstSolve: boolean; newly: string[] } {
+): { progress: Progress; xpEarned: number; firstSolve: boolean; newly: string[]; claimedQuests: DailyQuest[] } {
+  const today = todayStamp(opts.now);
   const firstSolve = !progress.solved[problem.id];
-  let next = bumpStreak(progress, todayStamp(opts.now));
+  let next = bumpStreak(progress, today);
   const xpEarned = firstSolve ? xpForSolve(problem, opts.hintsUsed, opts.peekedSolution) : 0;
   const record: SolveRecord = next.solved[problem.id]
     ? {
         ...next.solved[problem.id],
         attempts: next.solved[problem.id].attempts + 1,
+        lastAttemptAt: today,
         localPass: next.solved[problem.id].localPass || opts.localPass,
       }
     : {
-        solvedAt: todayStamp(opts.now),
+        solvedAt: today,
+        lastAttemptAt: today,
         attempts: 1,
         hintsUsed: opts.hintsUsed,
         peekedSolution: opts.peekedSolution,
@@ -152,7 +156,8 @@ export function recordSolve(
     solved: { ...next.solved, [problem.id]: record },
   };
   const granted = grantNewAchievements(next);
-  return { progress: granted.progress, xpEarned, firstSolve, newly: granted.newly };
+  const withQuests = applyEarnedQuests(granted.progress, today);
+  return { progress: withQuests.progress, xpEarned, firstSolve, newly: granted.newly, claimedQuests: withQuests.claimed };
 }
 
 export function recordStudy(progress: Progress, patternId: PatternId, now = new Date()): Progress {
@@ -163,7 +168,8 @@ export function recordStudy(progress: Progress, patternId: PatternId, now = new 
     xp: progress.xp + (guide?.xp ?? 40),
     studied: { ...progress.studied, [patternId]: todayStamp(now) },
   };
-  return grantNewAchievements(next).progress;
+  const granted = grantNewAchievements(next);
+  return applyEarnedQuests(granted.progress, todayStamp(now)).progress;
 }
 
 export function recordResource(progress: Progress, resourceId: string, now = new Date()): Progress {
@@ -188,7 +194,7 @@ export function recordCoach(progress: Progress, now = new Date()): Progress {
   return grantNewAchievements(next).progress;
 }
 
-export type QuestKind = "solve" | "study" | "review" | "resource";
+export type QuestKind = "solve" | "study" | "review";
 
 export interface DailyQuest {
   id: string;
@@ -197,6 +203,8 @@ export interface DailyQuest {
   detail: string;
   xp: number;
   href: string;
+  targetId: string;
+  how: string;
 }
 
 function hashDay(stamp: string): number {
@@ -208,53 +216,141 @@ function hashDay(stamp: string): number {
   return h >>> 0;
 }
 
-export function dailyQuests(progress: Progress, today = todayStamp()): DailyQuest[] {
+function pickFrom<T>(items: T[], seed: number): T {
+  return items[seed % items.length];
+}
+
+export function pickDailyTargets(progress: Progress, today = todayStamp()): DailyPin {
   const seed = hashDay(today);
-  const unsolved = PROBLEMS.filter((p) => !progress.solved[p.id]);
-  const pick = unsolved.length ? unsolved[seed % unsolved.length] : PROBLEMS[seed % PROBLEMS.length];
+  const python = PROBLEMS.filter((p) => (p.kind ?? "python") === "python");
+  const sql = PROBLEMS.filter((p) => p.kind === "sql");
+  const pythonOpen = python.filter((p) => !progress.solved[p.id]);
+  const sqlOpen = sql.filter((p) => !progress.solved[p.id]);
   const unstudied = PATTERNS.filter((p) => !progress.studied[p.id]);
-  const pattern = unstudied.length ? unstudied[seed % unstudied.length] : PATTERNS[seed % PATTERNS.length];
   const solvedIds = Object.keys(progress.solved);
-  const reviewId = solvedIds.length ? solvedIds[seed % solvedIds.length] : pick.id;
-  const reviewProblem = PROBLEMS.find((p) => p.id === reviewId) ?? pick;
-  const sqlPool = PROBLEMS.filter((p) => p.kind === "sql" && !progress.solved[p.id]);
-  const sqlAll = PROBLEMS.filter((p) => p.kind === "sql");
-  const sqlPick = (sqlPool.length ? sqlPool : sqlAll)[seed % (sqlPool.length ? sqlPool.length : sqlAll.length)];
+  return {
+    solve: pickFrom(pythonOpen.length ? pythonOpen : python, seed).id,
+    sql: pickFrom(sqlOpen.length ? sqlOpen : sql, seed + 11).id,
+    study: pickFrom(unstudied.length ? unstudied : PATTERNS, seed + 23).id,
+    review: pickFrom(solvedIds.length ? solvedIds : python.map((p) => p.id), seed + 41),
+  };
+}
+
+export function withDailyPin(progress: Progress, today = todayStamp()): Progress {
+  if (progress.daily?.[today]) return progress;
+  return {
+    ...progress,
+    daily: { ...(progress.daily ?? {}), [today]: pickDailyTargets(progress, today) },
+  };
+}
+
+function pinFor(progress: Progress, today: string): DailyPin {
+  return progress.daily?.[today] ?? pickDailyTargets(progress, today);
+}
+
+function didWorkToday(record: SolveRecord | undefined, today: string): boolean {
+  if (!record?.localPass) return false;
+  return record.lastAttemptAt === today || record.solvedAt === today;
+}
+
+export function isQuestSatisfied(progress: Progress, quest: DailyQuest, today = todayStamp()): boolean {
+  if (quest.kind === "study") {
+    return progress.studied[quest.targetId] === today;
+  }
+  return didWorkToday(progress.solved[quest.targetId], today);
+}
+
+export function dailyQuests(progress: Progress, today = todayStamp()): DailyQuest[] {
+  const pin = pinFor(progress, today);
+  const pick = PROBLEM_BY_ID[pin.solve] ?? PROBLEMS[0];
+  const sqlPick = PROBLEM_BY_ID[pin.sql] ?? PROBLEMS.find((p) => p.kind === "sql") ?? PROBLEMS[0];
+  const pattern = PATTERNS.find((p) => p.id === pin.study) ?? PATTERNS[0];
+  const reviewProblem = PROBLEM_BY_ID[pin.review] ?? pick;
+  const hasHistory = Boolean(progress.solved[pin.review]);
 
   return [
     {
       id: `solve-${today}`,
       kind: "solve",
       title: `Solve ${pick.title}`,
-      detail: `${pick.difficulty} · ${pick.pattern.replace("-", " ")} · ${pick.xp} XP`,
+      detail: `${pick.difficulty} · ${pick.pattern.replace("-", " ")}`,
       xp: 30,
       href: `/practice/${pick.id}`,
+      targetId: pick.id,
+      how: "Pass hidden tests with Submit to earn the quest bonus.",
     },
     {
       id: `sql-${today}`,
       kind: "solve",
       title: `SQL: ${sqlPick.title}`,
-      detail: `${sqlPick.difficulty} · ${sqlPick.pattern.replace("sql-", "sql ")} · hidden result sets`,
+      detail: `${sqlPick.difficulty} · ${sqlPick.pattern.replace("sql-", "sql ")}`,
       xp: 30,
       href: `/practice/${sqlPick.id}`,
+      targetId: sqlPick.id,
+      how: "Write the query, Run it, then Submit when the result table matches.",
     },
     {
       id: `study-${today}`,
       kind: "study",
       title: `Study ${pattern.name}`,
-      detail: `${pattern.studyMinutes} min · +${pattern.xp} XP when marked studied`,
+      detail: `${pattern.studyMinutes} min guide`,
       xp: 20,
       href: `/learn/${pattern.id}`,
+      targetId: pattern.id,
+      how: "Read the guide, then tap Mark studied on that page.",
     },
     {
       id: `review-${today}`,
       kind: "review",
-      title: solvedIds.length ? `Re-solve ${reviewProblem.title} from memory` : "Solve your first problem, then review tomorrow",
-      detail: "Spaced repetition — close the editor, redraw the approach, then code it again.",
+      title: hasHistory ? `Re-solve ${reviewProblem.title} from memory` : `Solve ${reviewProblem.title} first, then review it`,
+      detail: "Spaced repetition — redraw the approach, then Submit again.",
       xp: 25,
       href: `/practice/${reviewProblem.id}`,
+      targetId: reviewProblem.id,
+      how: "Submit a passing solution today (re-runs count).",
     },
   ];
+}
+
+export function applyEarnedQuests(
+  progress: Progress,
+  today = todayStamp(),
+): { progress: Progress; claimed: DailyQuest[] } {
+  const pinned = withDailyPin(progress, today);
+  const claimed: DailyQuest[] = [];
+  let next = pinned;
+  for (const quest of dailyQuests(next, today)) {
+    if (isQuestDone(next, quest.id, today)) continue;
+    if (!isQuestSatisfied(next, quest, today)) continue;
+    next = completeQuestUnchecked(next, quest, today);
+    claimed.push(quest);
+  }
+  return { progress: next, claimed };
+}
+
+function completeQuestUnchecked(progress: Progress, quest: DailyQuest, today: string): Progress {
+  const done = new Set(progress.questLog[today] ?? []);
+  if (done.has(quest.id)) return progress;
+  let next: Progress = {
+    ...progress,
+    questLog: { ...progress.questLog, [today]: [...Array.from(done), quest.id] },
+    xp: progress.xp + quest.xp,
+  };
+  if (quest.kind === "review") next = { ...next, reviewCount: next.reviewCount + 1 };
+  return grantNewAchievements(next).progress;
+}
+
+export function completeQuest(progress: Progress, questId: string, today = todayStamp()): Progress {
+  const pinned = withDailyPin(progress, today);
+  const quest = dailyQuests(pinned, today).find((q) => q.id === questId);
+  if (!quest) return pinned;
+  if (!isQuestSatisfied(pinned, quest, today)) return pinned;
+  if (isQuestDone(pinned, quest.id, today)) return pinned;
+  return completeQuestUnchecked(pinned, quest, today);
+}
+
+export function isQuestDone(progress: Progress, questId: string, today = todayStamp()): boolean {
+  return Boolean(progress.questLog[today]?.includes(questId));
 }
 
 export function recommendedProblem(progress: Progress): Problem {
@@ -272,22 +368,4 @@ export function recommendedProblem(progress: Progress): Problem {
     PROBLEMS.find((p) => !progress.solved[p.id]) ??
     PROBLEMS[0];
   return candidate;
-}
-
-export function completeQuest(progress: Progress, questId: string, today = todayStamp()): Progress {
-  const done = new Set(progress.questLog[today] ?? []);
-  if (done.has(questId)) return progress;
-  const quests = dailyQuests(progress, today);
-  const quest = quests.find((q) => q.id === questId);
-  let next: Progress = {
-    ...bumpStreak(progress, today),
-    questLog: { ...progress.questLog, [today]: [...Array.from(done), questId] },
-    xp: progress.xp + (quest?.xp ?? 0),
-  };
-  if (quest?.kind === "review") next = { ...next, reviewCount: next.reviewCount + 1 };
-  return grantNewAchievements(next).progress;
-}
-
-export function isQuestDone(progress: Progress, questId: string, today = todayStamp()): boolean {
-  return Boolean(progress.questLog[today]?.includes(questId));
 }

@@ -86,11 +86,19 @@ export interface Rank {
 
 export interface SolveRecord {
   solvedAt: string;
+  lastAttemptAt?: string;
   attempts: number;
   hintsUsed: number;
   peekedSolution: boolean;
   xpEarned: number;
   localPass: boolean;
+}
+
+export interface DailyPin {
+  solve: string;
+  sql: string;
+  study: PatternId;
+  review: string;
 }
 
 export interface Progress {
@@ -102,6 +110,7 @@ export interface Progress {
   resourcesRead: string[];
   achievements: string[];
   questLog: Record<string, string[]>;
+  daily?: Record<string, DailyPin>;
   reviewCount: number;
   coachSessions: number;
 }
