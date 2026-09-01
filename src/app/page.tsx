@@ -16,6 +16,7 @@ import {
 } from "@/lib/game";
 import { readLastProblemId } from "@/lib/lastProblem";
 import { useProgress } from "@/components/ProgressProvider";
+import { StreakCalendar } from "@/components/StreakCalendar";
 
 export default function BoardPage() {
   const { progress, ready } = useProgress();
@@ -49,9 +50,12 @@ export default function BoardPage() {
           </p>
         )}
         <p className="mt-3 text-sm text-paper/45">
-          Progress is saved in this browser (no login). Same laptop + same browser = your streak stays.
+          Progress lives in this browser only (no account). Same machine + same browser keeps XP and streak. Export JSON
+          from Badges before you switch laptops.
         </p>
       </section>
+
+      {ready && <StreakCalendar progress={progress} />}
 
       {(last || dueCount > 0) && (
         <section className="grid gap-3 sm:grid-cols-2">
@@ -123,6 +127,9 @@ export default function BoardPage() {
             className="mt-5 inline-block rounded-md bg-gold-400 px-4 py-2 font-mono text-sm text-ink-950"
           >
             Start problem
+          </Link>
+          <Link href="/roadmap" className="mt-3 ml-3 inline-block font-mono text-xs text-gold-400">
+            Open the pattern roadmap →
           </Link>
         </article>
         <article className="rounded-2xl border border-violet-500/25 bg-ink-900/70 p-6">

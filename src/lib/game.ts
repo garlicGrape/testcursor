@@ -15,11 +15,15 @@ export function emptyProgress(): Progress {
     daily: {},
     reviewCount: 0,
     coachSessions: 0,
+    activeDays: [],
   };
 }
 
 export function todayStamp(now = new Date()): string {
-  return now.toISOString().slice(0, 10);
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export function levelFromXp(xp: number): number {
@@ -53,14 +57,50 @@ export function xpForSolve(problem: Problem, hintsUsed: number, peekedSolution: 
 }
 
 export function bumpStreak(progress: Progress, today = todayStamp()): Progress {
-  const next = { ...progress };
-  if (next.lastActiveDate === today) return next;
-  const yesterday = new Date(`${today}T12:00:00.000Z`);
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-  const yStamp = yesterday.toISOString().slice(0, 10);
-  next.streak = next.lastActiveDate === yStamp ? next.streak + 1 : 1;
-  next.lastActiveDate = today;
-  return next;
+  const days = Array.from(new Set([...(progress.activeDays ?? []), today])).sort();
+  if (progress.lastActiveDate === today) {
+    return { ...progress, activeDays: days };
+  }
+  const yesterday = addUtcDays(today, -1);
+  return {
+    ...progress,
+    streak: progress.lastActiveDate === yesterday ? progress.streak + 1 : 1,
+    lastActiveDate: today,
+    activeDays: days,
+  };
+}
+
+export type StreakKind = "none" | "done-today" | "at-risk" | "broken";
+
+export function streakStatus(progress: Progress, today = todayStamp()): { kind: StreakKind; last: string | null } {
+  const last = progress.lastActiveDate;
+  if (!last) return { kind: "none", last };
+  if (last === today) return { kind: "done-today", last };
+  if (last === addUtcDays(today, -1)) return { kind: "at-risk", last };
+  return { kind: "broken", last };
+}
+
+export function hydrateActiveDays(progress: Progress): Progress {
+  if ((progress.activeDays ?? []).length > 0) return progress;
+  const days = new Set<string>();
+  if (progress.lastActiveDate) days.add(progress.lastActiveDate);
+  for (const record of Object.values(progress.solved)) {
+    if (!record.localPass) continue;
+    days.add(record.solvedAt);
+    if (record.lastAttemptAt) days.add(record.lastAttemptAt);
+  }
+  for (const stamp of Object.values(progress.studied)) days.add(stamp);
+  return { ...progress, activeDays: Array.from(days).sort() };
+}
+
+export function recentActiveDays(progress: Progress, count = 28, today = todayStamp()): { stamp: string; on: boolean }[] {
+  const set = new Set(progress.activeDays ?? []);
+  const out: { stamp: string; on: boolean }[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const stamp = addUtcDays(today, -i);
+    out.push({ stamp, on: set.has(stamp) });
+  }
+  return out;
 }
 
 export function patternMastery(progress: Progress): Record<PatternId, { solved: number; total: number }> {
@@ -172,10 +212,10 @@ export function recordStudy(progress: Progress, patternId: PatternId, now = new 
   return applyEarnedQuests(granted.progress, todayStamp(now)).progress;
 }
 
-export function recordResource(progress: Progress, resourceId: string, now = new Date()): Progress {
+export function recordResource(progress: Progress, resourceId: string): Progress {
   if (progress.resourcesRead.includes(resourceId)) return progress;
-  let next: Progress = {
-    ...bumpStreak(progress, todayStamp(now)),
+  const next: Progress = {
+    ...progress,
     resourcesRead: [...progress.resourcesRead, resourceId],
   };
   return grantNewAchievements(next).progress;

@@ -56,7 +56,8 @@ export function ProgressBackup() {
     <section className="mt-10 rounded-2xl border border-violet-500/25 bg-ink-900/70 p-5">
       <h2 className="font-display text-2xl">This browser</h2>
       <p className="mt-2 text-sm text-paper/65">
-        Progress lives in localStorage. Export a JSON backup before you clear cookies or switch machines.
+        Progress lives in localStorage on this origin. Export a JSON backup before you clear cookies or switch machines
+        — that file is how a streak survives a new laptop.
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         <button type="button" onClick={exportJson} className="rounded-md bg-violet-600 px-3 py-1.5 font-mono text-xs">

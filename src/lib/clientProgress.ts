@@ -3,6 +3,7 @@ import type { PatternId, Progress } from "@/data/types";
 import {
   completeQuest,
   emptyProgress,
+  hydrateActiveDays,
   recordResource,
   recordReview,
   recordSolve,
@@ -25,7 +26,9 @@ export function loadProgress(): Progress {
   if (typeof window === "undefined") return emptyProgress();
   try {
     const raw = window.localStorage.getItem(PROGRESS_KEY);
-    return raw ? withDailyPin({ ...emptyProgress(), ...JSON.parse(raw) }) : withDailyPin(emptyProgress());
+    return raw
+      ? withDailyPin(hydrateActiveDays({ ...emptyProgress(), ...JSON.parse(raw) }))
+      : withDailyPin(emptyProgress());
   } catch {
     return emptyProgress();
   }

@@ -110,9 +110,10 @@ export interface Progress {
   resourcesRead: string[];
   achievements: string[];
   questLog: Record<string, string[]>;
-  daily?: Record<string, DailyPin>;
+    daily?: Record<string, DailyPin>;
   reviewCount: number;
   coachSessions: number;
+  activeDays?: string[];
 }
 
 export const XP_PER_LEVEL = 400;

@@ -2,6 +2,7 @@
 
 import { ACHIEVEMENTS } from "@/data/types";
 import { ProgressBackup } from "@/components/ProgressBackup";
+import { StreakCalendar } from "@/components/StreakCalendar";
 import { useProgress } from "@/components/ProgressProvider";
 
 export default function AchievementsPage() {
@@ -12,9 +13,11 @@ export default function AchievementsPage() {
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-4xl">Badges</h1>
       <p className="mt-2 text-paper/65">
-        {unlocked.size} / {ACHIEVEMENTS.length} unlocked. Streaks and clean takes (no hints) are worth more than grinding
-        with the solution tab open.
+        {unlocked.size} / {ACHIEVEMENTS.length} unlocked. Streaks live in this browser only.
       </p>
+      <div className="mt-8">
+        <StreakCalendar progress={progress} />
+      </div>
       <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {ACHIEVEMENTS.map((a) => {
           const on = unlocked.has(a.id);

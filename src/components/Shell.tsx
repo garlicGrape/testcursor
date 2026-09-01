@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { XP_PER_LEVEL } from "@/data/types";
-import { levelFromXp, rankForLevel, xpIntoLevel } from "@/lib/game";
+import { levelFromXp, rankForLevel, streakStatus, xpIntoLevel } from "@/lib/game";
 import { useProgress } from "./ProgressProvider";
 
 const NAV = [
   { href: "/", label: "Board" },
   { href: "/practice", label: "Practice" },
+  { href: "/roadmap", label: "Roadmap" },
   { href: "/review", label: "Review" },
   { href: "/quests", label: "Quests" },
   { href: "/learn", label: "Patterns" },
@@ -23,6 +24,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const rank = rankForLevel(level);
   const into = xpIntoLevel(progress.xp);
   const pct = Math.min(100, Math.round((into / XP_PER_LEVEL) * 100));
+  const streak = streakStatus(progress);
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
@@ -69,8 +71,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-3 font-mono text-sm">
-            <span className="rounded-full border border-ember/40 bg-ember/10 px-3 py-1 text-ember">
+            <span
+              className={`rounded-full border px-3 py-1 ${
+                streak.kind === "at-risk"
+                  ? "border-gold-400/50 bg-gold-400/10 text-gold-200"
+                  : "border-ember/40 bg-ember/10 text-ember"
+              }`}
+              title={
+                streak.kind === "at-risk"
+                  ? "Submit today in this browser to keep the streak"
+                  : "Passing Submit or a new study guide, once per local day"
+              }
+            >
               {ready ? progress.streak : 0} day streak
+              {ready && streak.kind === "at-risk" ? " · keep it" : ""}
             </span>
             <span className="text-gold-400">{ready ? progress.xp : 0} XP</span>
           </div>

@@ -7,14 +7,18 @@ import {
   dailyQuests,
   emptyProgress,
   hintMultiplier,
+  hydrateActiveDays,
   isQuestDone,
   levelFromXp,
   nextProblem,
   pickDailyTargets,
   rankForLevel,
+  recordResource,
   recordSolve,
   recordStudy,
   reviewSchedule,
+  streakStatus,
+  todayStamp,
   withDailyPin,
   xpForSolve,
 } from "./game";
@@ -46,13 +50,46 @@ describe("xp for solves", () => {
 });
 
 describe("streak", () => {
+  it("uses the local calendar day, not UTC ISO", () => {
+    expect(todayStamp(new Date(2026, 7, 22, 1, 0, 0))).toBe("2026-08-22");
+  });
+
   it("resets after a missed day", () => {
     const p = bumpStreak({ ...emptyProgress(), streak: 4, lastActiveDate: "2026-08-20" }, "2026-08-22");
     expect(p.streak).toBe(1);
+    expect(p.activeDays).toContain("2026-08-22");
   });
   it("increments consecutive days", () => {
     const p = bumpStreak({ ...emptyProgress(), streak: 2, lastActiveDate: "2026-08-21" }, "2026-08-22");
     expect(p.streak).toBe(3);
+  });
+  it("marks yesterday as at-risk until you submit today", () => {
+    const p = { ...emptyProgress(), streak: 5, lastActiveDate: "2026-08-21" };
+    expect(streakStatus(p, "2026-08-22").kind).toBe("at-risk");
+    expect(streakStatus(bumpStreak(p, "2026-08-22"), "2026-08-22").kind).toBe("done-today");
+  });
+  it("backfills a calendar from old saves that only stored lastActiveDate", () => {
+    const hydrated = hydrateActiveDays({
+      ...emptyProgress(),
+      lastActiveDate: "2026-08-22",
+      solved: {
+        "pair-sum": {
+          solvedAt: "2026-08-20",
+          lastAttemptAt: "2026-08-22",
+          attempts: 1,
+          hintsUsed: 0,
+          peekedSolution: false,
+          xpEarned: 100,
+          localPass: true,
+        },
+      },
+    });
+    expect(hydrated.activeDays).toEqual(expect.arrayContaining(["2026-08-20", "2026-08-22"]));
+  });
+  it("does not treat opening a study link as a streak day", () => {
+    const next = recordResource({ ...emptyProgress(), streak: 4, lastActiveDate: "2026-08-20" }, "algo-course");
+    expect(next.streak).toBe(4);
+    expect(next.lastActiveDate).toBe("2026-08-20");
   });
 });
 
