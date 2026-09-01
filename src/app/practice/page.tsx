@@ -31,8 +31,8 @@ export default function PracticePage() {
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-4xl">Practice</h1>
       <p className="mt-2 max-w-2xl text-paper/65">
-        Core interview patterns plus the 19-problem sheet you added. Local ones run with{" "}
-        <code className="font-mono text-gold-200">python -m dojo solve &lt;id&gt;</code>.
+        Open a problem and write Python in the editor — hidden tests run in the browser, same loop as LeetCode.
+        Submit banks XP only when every test passes.
       </p>
       <div className="mt-6 flex flex-wrap gap-2">
         <select
@@ -90,7 +90,7 @@ export default function PracticePage() {
                 {p.fromUserList && (
                   <span className="rounded-full bg-gold-400/15 px-2 py-0.5 font-mono text-[10px] text-gold-200">your list</span>
                 )}
-                {p.local && <span className="rounded-full bg-violet-600/30 px-2 py-0.5 font-mono text-[10px]">local tests</span>}
+                <span className="rounded-full bg-violet-600/30 px-2 py-0.5 font-mono text-[10px]">code here</span>
               </Link>
             </li>
           );
