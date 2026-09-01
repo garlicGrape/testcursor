@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { PATTERNS } from "@/data/types";
 import { ACHIEVEMENTS } from "@/data/types";
+import { PROBLEMS } from "@/data/problems";
 import { dailyQuests, isQuestDone, patternMastery, rankForLevel, recommendedProblem, levelFromXp } from "@/lib/game";
 import { useProgress } from "@/components/ProgressProvider";
 
@@ -21,9 +22,9 @@ export default function BoardPage() {
         <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-gold-400">Today&apos;s loop</p>
         <h1 className="mt-2 font-display text-4xl text-paper md:text-5xl">Show up. Pick a fight. Talk out loud.</h1>
         <p className="mt-4 max-w-2xl text-paper/70">
-          This dojo is for job interviews — coding rounds for SWE, data science, and MLE. XP, streaks, and badges
-          only exist to keep you coming back. The actual skill is: clarify, name the pattern, code, then quote
-          complexity.
+          This dojo is for job interviews — coding rounds for SWE, data science, and MLE. {PROBLEMS.length} hidden-test
+          problems (Python + SQL), a mock interviewer on every prompt, XP and badges only to keep you coming back. The
+          actual skill is: clarify, name the pattern, code, then quote complexity.
         </p>
         {ready && (
           <p className="mt-3 font-mono text-sm text-violet-300">
@@ -35,7 +36,7 @@ export default function BoardPage() {
         </p>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2">
         {quests.map((q) => {
           const done = isQuestDone(progress, q.id);
           return (

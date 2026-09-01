@@ -400,4 +400,104 @@ def permute(nums: List[int]) -> List[List[int]]:
       },
     ],
   ),
+  "valid-palindrome": spec(
+    `def is_palindrome(s: str) -> bool:
+    """True if s is a palindrome ignoring non-alphanumerics and case."""
+    pass
+`,
+    [
+      { name: "panama", got: 'is_palindrome("A man, a plan, a canal: Panama")', want: "True" },
+      { name: "race", got: 'is_palindrome("race a car")', want: "False" },
+      { name: "empty-ish", got: 'is_palindrome(" ")', want: "True" },
+    ],
+  ),
+  "decode-ways-lab": spec(
+    `def num_decodings(s: str) -> int:
+    """Ways to decode digit string as A-Z (1..26)."""
+    pass
+`,
+    [
+      { name: "12", got: 'num_decodings("12")', want: "2" },
+      { name: "226", got: 'num_decodings("226")', want: "3" },
+      { name: "leading zero", got: 'num_decodings("06")', want: "0" },
+    ],
+  ),
+  "length-of-lis": spec(
+    `from typing import List
+
+def length_of_lis(nums: List[int]) -> int:
+    """Length of longest strictly increasing subsequence."""
+    pass
+`,
+    [
+      { name: "example", got: "length_of_lis([10,9,2,5,3,7,101,18])", want: "4" },
+      { name: "single", got: "length_of_lis([7])", want: "1" },
+    ],
+  ),
+  "max-product-sub": spec(
+    `from typing import List
+
+def max_product(nums: List[int]) -> int:
+    """Maximum product of any contiguous subarray."""
+    pass
+`,
+    [
+      { name: "example", got: "max_product([2,3,-2,4])", want: "6" },
+      { name: "zero", got: "max_product([-2,0,-1])", want: "0" },
+    ],
+  ),
+  "combination-sum-lab": spec(
+    `from typing import List
+
+def combination_sum(candidates: List[int], target: int) -> List[List[int]]:
+    """Combinations that sum to target; reuse allowed. Any inner order."""
+    pass
+`,
+    [
+      {
+        name: "example",
+        got: "sorted(tuple(sorted(c)) for c in combination_sum([2,3,6,7], 7))",
+        want: "[(2, 2, 3), (7,)]",
+      },
+    ],
+  ),
+  "right-side-view": spec(
+    `${TREE_HELPERS}
+
+def right_side_view(root: Optional[TreeNode]) -> List[int]:
+    """Right-side view, top to bottom."""
+    pass
+`,
+    [
+      { name: "example", got: "right_side_view(_tree([1,2,3,None,5,None,4]))", want: "[1, 3, 4]" },
+      { name: "empty", got: "right_side_view(None)", want: "[]" },
+    ],
+    TREE_HELPERS,
+  ),
+  "set-matrix-zeroes": spec(
+    `from typing import List
+
+def set_zeroes(matrix: List[List[int]]) -> None:
+    """Zero rows and columns that contain a 0. In place."""
+    pass
+`,
+    [{ name: "example", got: "_run()", want: "[[1, 0, 1], [0, 0, 0], [1, 0, 1]]" }],
+    `def _run():
+    m = [[1,1,1],[1,0,1],[1,1,1]]
+    set_zeroes(m)
+    return m
+`,
+  ),
+  "word-break-bool": spec(
+    `from typing import List
+
+def word_break(s: str, word_dict: List[str]) -> bool:
+    """True if s is a concat of dictionary words (reuse ok)."""
+    pass
+`,
+    [
+      { name: "leetcode", got: 'word_break("leetcode", ["leet", "code"])', want: "True" },
+      { name: "catsandog", got: 'word_break("catsandog", ["cats", "dog", "sand", "and", "cat"])', want: "False" },
+    ],
+  ),
 };

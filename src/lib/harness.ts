@@ -1,8 +1,15 @@
+export interface ResultTable {
+  columns: string[];
+  rows: string[][];
+}
+
 export interface TestResult {
   name: string;
   ok: boolean;
   got: string;
   want: string;
+  gotTable?: ResultTable;
+  wantTable?: ResultTable;
 }
 
 export interface CodingSpec {

@@ -5,6 +5,7 @@ import Editor, { loader, type OnMount } from "@monaco-editor/react";
 import { getCoding } from "@/data/codingSpecs";
 import { runUserCode, warmPyodide, type RunOutcome } from "@/lib/pyodideClient";
 import type { TestResult } from "@/lib/harness";
+import { RunCompare } from "./DataTable";
 
 loader.config({
   paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs" },
@@ -229,7 +230,7 @@ export function CodeLab({
           />
         )}
       </div>
-      <div className="border-t border-violet-500/20 p-3">
+      <div className="min-h-0 border-t border-violet-500/20 p-3 xl:flex-1 xl:overflow-y-auto">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -272,21 +273,9 @@ export function CodeLab({
           </p>
         )}
         {results.length > 0 && (
-          <ul className="mt-2 max-h-40 space-y-1 overflow-auto font-mono text-[11px]">
+          <ul className="mt-2 max-h-[min(28rem,55vh)] space-y-2 overflow-auto">
             {results.map((t) => (
-              <li
-                key={t.name}
-                className={`rounded-md px-2 py-1 ${t.ok ? "bg-gold-400/10 text-gold-200" : "bg-ember/15 text-ember"}`}
-              >
-                <span className="mr-2">{t.ok ? "PASS" : "FAIL"}</span>
-                {t.name}
-                {!t.ok && (
-                  <div className="mt-1 whitespace-pre-wrap text-paper/70">
-                    got {t.got}
-                    {"\n"}want {t.want}
-                  </div>
-                )}
-              </li>
+              <RunCompare key={t.name} result={t} />
             ))}
           </ul>
         )}

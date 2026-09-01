@@ -12,8 +12,8 @@ export default function QuestsPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-4xl">Daily quests</h1>
       <p className="mt-2 text-paper/65">
-        Three things, every day: one new problem, one pattern, one review. Claim XP after you actually do the work —
-        the board cannot tell if you skipped the hard part.
+        Four things, every day: one coding problem, one SQL drill, one pattern, one review. Claim XP after you actually
+        do the work — the board cannot tell if you skipped the hard part.
       </p>
       <ol className="mt-8 space-y-4">
         {quests.map((q, i) => {

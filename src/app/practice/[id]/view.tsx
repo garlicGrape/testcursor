@@ -6,7 +6,9 @@ import { PROBLEM_BY_ID } from "@/data/problems";
 import { useProgress } from "@/components/ProgressProvider";
 import { CodeLab } from "@/components/CodeLab";
 import { SqlLab } from "@/components/SqlLab";
+import { SqlDataset } from "@/components/SqlDataset";
 import { Coach } from "@/components/Coach";
+import { getSqlSpec } from "@/data/sqlSpecs";
 import type { TestResult } from "@/lib/harness";
 
 export function ProblemView({ id }: { id: string }) {
@@ -91,16 +93,39 @@ export function ProblemView({ id }: { id: string }) {
           </p>
           <h1 className="mt-2 font-display text-3xl md:text-4xl">{problem.title}</h1>
           <p className="mt-4 whitespace-pre-wrap leading-relaxed">{problem.prompt}</p>
-          <h2 className="mt-6 font-display text-xl">Examples</h2>
-          <ul className="mt-2 space-y-3">
-            {problem.examples.map((ex) => (
-              <li key={ex.input} className="rounded-lg bg-ink-950/5 p-3 font-mono text-sm">
-                <div>in: {ex.input}</div>
-                <div>out: {ex.output}</div>
-                {ex.explanation && <div className="mt-1 text-ink-950/60">{ex.explanation}</div>}
-              </li>
-            ))}
-          </ul>
+          {isSql && getSqlSpec(problem.id) ? (
+            <div className="mt-6">
+              <h2 className="font-display text-xl">Tables &amp; sample rows</h2>
+              <p className="mt-1 text-sm text-ink-950/65">
+                This is the dataset your query runs on. Write a SELECT that returns the columns in{" "}
+                <span className="font-medium">Return this</span>.
+              </p>
+              <div className="mt-3">
+                <SqlDataset spec={getSqlSpec(problem.id)!} tone="light" defaultOpen />
+              </div>
+            </div>
+          ) : (
+            <>
+              <h2 className="mt-6 font-display text-xl">Examples</h2>
+              <ul className="mt-2 space-y-3">
+                {problem.examples.map((ex) => (
+                  <li key={ex.input} className="overflow-hidden rounded-lg border border-ink-950/10 bg-ink-950/[0.04]">
+                    <div className="grid gap-px sm:grid-cols-2">
+                      <div className="p-3">
+                        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-violet-800">Input</p>
+                        <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[13px]">{ex.input}</pre>
+                      </div>
+                      <div className="bg-white/60 p-3">
+                        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-violet-800">Output</p>
+                        <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[13px]">{ex.output}</pre>
+                      </div>
+                    </div>
+                    {ex.explanation && <p className="border-t border-ink-950/10 px-3 py-2 text-sm text-ink-950/60">{ex.explanation}</p>}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           <h2 className="mt-6 font-display text-xl">Constraints</h2>
           <ul className="mt-2 list-disc pl-5 text-sm text-ink-950/80">
             {problem.constraints.map((c) => (
