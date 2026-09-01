@@ -13,13 +13,19 @@ function runPython(source: string): string {
 }
 
 describe("in-browser coding catalog", () => {
-  it("has a coding spec for every problem id", () => {
-    const missing = PROBLEMS.filter((p) => !getCoding(p.id)).map((p) => p.id);
+  it("has a python spec for every python problem", () => {
+    const missing = PROBLEMS.filter((p) => (p.kind ?? "python") === "python" && !getCoding(p.id)).map((p) => p.id);
     expect(missing).toEqual([]);
   });
 
-  it("starters and tests compile as Python", () => {
-    for (const problem of PROBLEMS) {
+  it("has a sql spec for every sql problem", async () => {
+    const { getSqlSpec } = await import("@/data/sqlSpecs");
+    const missing = PROBLEMS.filter((p) => p.kind === "sql" && !getSqlSpec(p.id)).map((p) => p.id);
+    expect(missing).toEqual([]);
+  });
+
+  it("python starters and tests compile", () => {
+    for (const problem of PROBLEMS.filter((p) => (p.kind ?? "python") === "python")) {
       const spec = getCoding(problem.id);
       expect(spec, `missing coding spec for ${problem.id}`).toBeTruthy();
       const wrapped = wrapUserCode(spec!.starter, spec!.tests);

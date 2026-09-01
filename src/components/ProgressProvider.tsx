@@ -17,6 +17,7 @@ type ProgressContextValue = {
   study: (patternId: PatternId) => Promise<void>;
   openResource: (resourceId: string) => Promise<void>;
   finishQuest: (questId: string) => Promise<void>;
+  startCoach: () => Promise<void>;
 };
 
 const Ctx = createContext<ProgressContextValue | null>(null);
@@ -61,6 +62,9 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       },
       finishQuest: async (questId) => {
         await act({ action: "quest", questId });
+      },
+      startCoach: async () => {
+        await act({ action: "coach" });
       },
     }),
     [act, progress, ready, refresh],

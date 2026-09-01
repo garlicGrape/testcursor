@@ -5,6 +5,9 @@ import { useCallback, useState } from "react";
 import { PROBLEM_BY_ID } from "@/data/problems";
 import { useProgress } from "@/components/ProgressProvider";
 import { CodeLab } from "@/components/CodeLab";
+import { SqlLab } from "@/components/SqlLab";
+import { Coach } from "@/components/Coach";
+import type { TestResult } from "@/lib/harness";
 
 export function ProblemView({ id }: { id: string }) {
   const problem = PROBLEM_BY_ID[id];
@@ -12,6 +15,8 @@ export function ProblemView({ id }: { id: string }) {
   const [hintsOpen, setHintsOpen] = useState(0);
   const [peeked, setPeeked] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
+  const [lastResults, setLastResults] = useState<TestResult[] | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   const onPassed = useCallback(
     async (opts: { hintsUsed: number; peekedSolution: boolean }) => {
@@ -27,11 +32,17 @@ export function ProblemView({ id }: { id: string }) {
     [id, solve],
   );
 
+  const onResults = useCallback((results: TestResult[], error: string | null) => {
+    setLastResults(results);
+    setLastError(error);
+  }, []);
+
   if (!problem) {
     return <p className="text-paper/70">Unknown problem.</p>;
   }
 
   const record = progress.solved[problem.id];
+  const isSql = problem.kind === "sql";
 
   async function markExternal() {
     const data = await solve(problem.id, { hintsUsed: hintsOpen, peekedSolution: peeked, localPass: false });
@@ -44,12 +55,37 @@ export function ProblemView({ id }: { id: string }) {
     }
   }
 
+  const lab = isSql ? (
+    <SqlLab
+      problemId={problem.id}
+      hintsUsed={hintsOpen}
+      peeked={peeked}
+      onPeekChange={setPeeked}
+      onPassed={onPassed}
+      onResults={onResults}
+      flash={flash}
+      alreadySolved={Boolean(record)}
+    />
+  ) : (
+    <CodeLab
+      problemId={problem.id}
+      hintsUsed={hintsOpen}
+      peeked={peeked}
+      onPeekChange={setPeeked}
+      onPassed={onPassed}
+      onResults={onResults}
+      flash={flash}
+      alreadySolved={Boolean(record)}
+    />
+  );
+
   return (
     <div className="flex flex-col gap-4 xl:h-[calc(100vh-8.5rem)] xl:flex-row">
       <div className="order-2 flex min-h-0 w-full flex-col gap-4 overflow-y-auto xl:order-1 xl:w-[42%] xl:min-w-[22rem]">
         <article className="rounded-2xl bg-paper p-5 text-ink-950 shadow-dojo md:p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-violet-700">
             {problem.leetcode ? `LC ${problem.leetcode.number} · ` : ""}
+            {isSql ? "SQL · " : "Python · "}
             {problem.difficulty} · {problem.pattern}
             {problem.fromUserList ? " · your list" : ""}
           </p>
@@ -72,6 +108,13 @@ export function ProblemView({ id }: { id: string }) {
             ))}
           </ul>
         </article>
+        <Coach
+          problem={problem}
+          lastResults={lastResults}
+          lastError={lastError}
+          hintsOpen={hintsOpen}
+          onUnlockHint={() => setHintsOpen((n) => Math.min(problem.hints.length, n + 1))}
+        />
         <section className="rounded-2xl border border-violet-500/25 bg-ink-900/70 p-5">
           <h2 className="font-display text-2xl">Interview note</h2>
           <p className="mt-2 text-sm text-paper/70">{problem.interviewNote}</p>
@@ -111,8 +154,8 @@ export function ProblemView({ id }: { id: string }) {
         <section className="rounded-2xl border border-violet-500/25 bg-ink-900/70 p-5">
           <h2 className="font-display text-lg">Solved it on LeetCode.com?</h2>
           <p className="mt-1 text-xs text-paper/50">
-            Prefer Submit in the editor — XP from hidden tests is the real loop. This is only if you already passed
-            the official problem.
+            Prefer Submit in the editor — XP from hidden tests is the real loop. This is only if you already passed the
+            official problem.
           </p>
           <button
             type="button"
@@ -132,17 +175,7 @@ export function ProblemView({ id }: { id: string }) {
           ← All problems
         </Link>
       </div>
-      <div className="order-1 flex min-h-0 min-w-0 flex-1 xl:order-2">
-        <CodeLab
-          problemId={problem.id}
-          hintsUsed={hintsOpen}
-          peeked={peeked}
-          onPeekChange={setPeeked}
-          onPassed={onPassed}
-          flash={flash}
-          alreadySolved={Boolean(record)}
-        />
-      </div>
+      <div className="order-1 flex min-h-0 min-w-0 flex-1 xl:order-2">{lab}</div>
     </div>
   );
 }

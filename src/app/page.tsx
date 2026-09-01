@@ -85,7 +85,7 @@ export default function BoardPage() {
         <article className="rounded-2xl border border-violet-500/25 bg-ink-900/70 p-6">
           <div className="font-mono text-[11px] uppercase tracking-wider text-gold-400">How to use the coach</div>
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-paper/75">
-            <li>Open a problem, write Python in the editor, hit <span className="text-gold-200">Run</span> / <span className="text-gold-200">Submit</span>.</li>
+            <li>Open a problem, start the <span className="text-gold-200">mock interviewer</span>, then write Python or SQL and hit Run / Submit.</li>
             <li>
               Ask the Cursor coach: <em className="text-paper">&quot;Coach me on pair-sum. Do not give the solution.&quot;</em>
             </li>

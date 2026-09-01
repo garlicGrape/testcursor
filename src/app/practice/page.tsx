@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PROBLEMS } from "@/data/problems";
-import type { Difficulty, PatternId } from "@/data/types";
+import type { Difficulty, PatternId, ProblemKind } from "@/data/types";
 import { PATTERNS } from "@/data/types";
 import { useProgress } from "@/components/ProgressProvider";
 
@@ -11,30 +11,42 @@ export default function PracticePage() {
   const { progress } = useProgress();
   const [difficulty, setDifficulty] = useState<Difficulty | "all">("all");
   const [pattern, setPattern] = useState<PatternId | "all">("all");
-  const [list, setList] = useState<"all" | "user" | "core">("all");
+  const [list, setList] = useState<"all" | "user" | "core" | "sql">("all");
   const [status, setStatus] = useState<"all" | "todo" | "done">("all");
+  const [kind, setKind] = useState<ProblemKind | "all">("all");
 
   const rows = useMemo(() => {
     return PROBLEMS.filter((p) => {
       if (difficulty !== "all" && p.difficulty !== difficulty) return false;
       if (pattern !== "all" && p.pattern !== pattern) return false;
       if (list === "user" && !p.fromUserList) return false;
-      if (list === "core" && p.fromUserList) return false;
+      if (list === "core" && (p.fromUserList || p.kind === "sql")) return false;
+      if (list === "sql" && p.kind !== "sql") return false;
+      if (kind !== "all" && (p.kind ?? "python") !== kind) return false;
       const done = Boolean(progress.solved[p.id]);
       if (status === "todo" && done) return false;
       if (status === "done" && !done) return false;
       return true;
     });
-  }, [difficulty, list, pattern, progress.solved, status]);
+  }, [difficulty, kind, list, pattern, progress.solved, status]);
 
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-4xl">Practice</h1>
       <p className="mt-2 max-w-2xl text-paper/65">
-        Open a problem and write Python in the editor — hidden tests run in the browser, same loop as LeetCode.
-        Submit banks XP only when every test passes.
+        Open a problem and write Python or SQL in the editor — hidden tests run in the browser. Submit banks XP only
+        when every check passes. Use the mock interviewer on the problem page.
       </p>
       <div className="mt-6 flex flex-wrap gap-2">
+        <select
+          className="rounded-md border border-violet-500/30 bg-ink-900 px-3 py-2 font-mono text-sm"
+          value={kind}
+          onChange={(e) => setKind(e.target.value as ProblemKind | "all")}
+        >
+          <option value="all">Python + SQL</option>
+          <option value="python">Python</option>
+          <option value="sql">SQL</option>
+        </select>
         <select
           className="rounded-md border border-violet-500/30 bg-ink-900 px-3 py-2 font-mono text-sm"
           value={difficulty}
@@ -60,11 +72,12 @@ export default function PracticePage() {
         <select
           className="rounded-md border border-violet-500/30 bg-ink-900 px-3 py-2 font-mono text-sm"
           value={list}
-          onChange={(e) => setList(e.target.value as "all" | "user" | "core")}
+          onChange={(e) => setList(e.target.value as "all" | "user" | "core" | "sql")}
         >
           <option value="all">All lists</option>
           <option value="user">Your list (19)</option>
-          <option value="core">Core catalog</option>
+          <option value="core">Core + grind</option>
+          <option value="sql">SQL track</option>
         </select>
         <select
           className="rounded-md border border-violet-500/30 bg-ink-900 px-3 py-2 font-mono text-sm"
@@ -90,7 +103,9 @@ export default function PracticePage() {
                 {p.fromUserList && (
                   <span className="rounded-full bg-gold-400/15 px-2 py-0.5 font-mono text-[10px] text-gold-200">your list</span>
                 )}
-                <span className="rounded-full bg-violet-600/30 px-2 py-0.5 font-mono text-[10px]">code here</span>
+                <span className="rounded-full bg-violet-600/30 px-2 py-0.5 font-mono text-[10px]">
+                  {p.kind === "sql" ? "SQL" : "code here"}
+                </span>
               </Link>
             </li>
           );

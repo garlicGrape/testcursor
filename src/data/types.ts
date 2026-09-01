@@ -12,7 +12,13 @@ export type PatternId =
   | "graphs"
   | "dp"
   | "intervals"
-  | "backtracking";
+  | "backtracking"
+  | "sql-select"
+  | "sql-joins"
+  | "sql-agg"
+  | "sql-window";
+
+export type ProblemKind = "python" | "sql";
 
 export type Track = "core" | "data-science" | "mle" | "sql" | "user-list";
 
@@ -26,6 +32,7 @@ export interface Problem {
   id: string;
   title: string;
   difficulty: Difficulty;
+  kind?: ProblemKind;
   pattern: PatternId;
   patterns: PatternId[];
   track: Track[];
@@ -96,6 +103,7 @@ export interface Progress {
   achievements: string[];
   questLog: Record<string, string[]>;
   reviewCount: number;
+  coachSessions: number;
 }
 
 export const XP_PER_LEVEL = 400;
@@ -358,6 +366,68 @@ for start, end in intervals[1:]:
     studyMinutes: 25,
     xp: 50,
   },
+  {
+    id: "sql-select",
+    name: "SQL: filter & project",
+    tagline: "WHERE, DISTINCT, ORDER BY — get the grain right before you join.",
+    whenToUse: "One table, a predicate, maybe a sort. DS phone screens start here to see if you read the question.",
+    template: `SELECT col_a, col_b
+FROM t
+WHERE predicate
+ORDER BY col_a;`,
+    pitfalls: [
+      "Filtering NULLs with !=  — use IS NULL / IS NOT NULL.",
+      "SELECT * when the interviewer asked for specific columns.",
+    ],
+    studyMinutes: 15,
+    xp: 35,
+  },
+  {
+    id: "sql-joins",
+    name: "SQL: joins",
+    tagline: "LEFT vs INNER changes who disappears. Say the grain out loud.",
+    whenToUse: "Two or more tables. Ask: which rows must survive if the right side is missing?",
+    template: `SELECT p.name, a.city
+FROM person p
+LEFT JOIN address a ON a.person_id = p.id;`,
+    pitfalls: [
+      "INNER JOIN when the prompt wants people with no address (that's LEFT).",
+      "Joining on the wrong key and fan-out duplicating rows.",
+    ],
+    studyMinutes: 20,
+    xp: 40,
+  },
+  {
+    id: "sql-agg",
+    name: "SQL: group & aggregate",
+    tagline: "GROUP BY the grain, HAVING after the aggregate, COUNT distinct when asked.",
+    whenToUse: "Per-user / per-day / per-department stats. Second-highest is MAX of the rest, not LIMIT 1 OFFSET 1 (ties).",
+    template: `SELECT dept, MAX(salary) AS top_pay
+FROM employee
+GROUP BY dept
+HAVING COUNT(*) >= 2;`,
+    pitfalls: [
+      "Putting a WHERE on an aggregate — that's HAVING.",
+      "Grouping by name when ids can collide.",
+    ],
+    studyMinutes: 20,
+    xp: 40,
+  },
+  {
+    id: "sql-window",
+    name: "SQL: window functions",
+    tagline: "RANK / DENSE_RANK / ROW_NUMBER / LAG — keep the row, add a measure.",
+    whenToUse: "You need an order statistic without collapsing rows: running totals, previous-day, top-n per group.",
+    template: `SELECT score,
+       DENSE_RANK() OVER (ORDER BY score DESC) AS rnk
+FROM scores;`,
+    pitfalls: [
+      "RANK vs DENSE_RANK on ties (gaps vs no gaps).",
+      "Forgetting PARTITION BY when the rank is per department.",
+    ],
+    studyMinutes: 25,
+    xp: 50,
+  },
 ];
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -378,4 +448,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "librarian", name: "Resourceful", description: "Open 5 study resources.", xp: 30 },
   { id: "reviewer", name: "Spaced Reps", description: "Complete 3 review quests.", xp: 45 },
   { id: "catalog-12", name: "Blind Dozen", description: "Solve 12 catalog problems.", xp: 100 },
+  { id: "sql-3", name: "Analyst Seat", description: "Pass 3 SQL problems in the dojo.", xp: 60 },
+  { id: "catalog-40", name: "OA Battery", description: "Solve 40 catalog problems.", xp: 150 },
+  { id: "coach-3", name: "Mock Loop", description: "Run 3 in-app mock-interview sessions.", xp: 40 },
 ];
