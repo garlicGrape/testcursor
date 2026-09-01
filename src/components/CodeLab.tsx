@@ -22,6 +22,14 @@ type Props = {
   alreadySolved: boolean;
 };
 
+function prefersPlainEditor(): boolean {
+  if (typeof window === "undefined") return true;
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod|Android/i.test(ua)) return true;
+  if (window.matchMedia("(pointer: coarse)").matches) return true;
+  return window.innerWidth < 900;
+}
+
 export function CodeLab({
   problemId,
   hintsUsed,
@@ -37,8 +45,19 @@ export function CodeLab({
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<RunOutcome | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [plain, setPlain] = useState(true);
+  const [editorPx, setEditorPx] = useState(420);
   const codeRef = useRef(code);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const monacoRef = useRef<Parameters<OnMount>[0] | null>(null);
   codeRef.current = code;
+
+  useEffect(() => {
+    const apply = () => setPlain(prefersPlainEditor());
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, []);
 
   useEffect(() => {
     if (!spec) return;
@@ -77,29 +96,52 @@ export function CodeLab({
     };
   }, []);
 
-  const run = useCallback(async (submit: boolean) => {
-    if (!spec) return;
-    setBusy(true);
-    setNote(null);
-    const result = await runUserCode(codeRef.current, spec.tests, submit ? 20000 : 20000);
-    setOutcome(result);
-    setBusy(false);
-    if (result.error) {
-      setRuntime((r) => (r === "loading" ? "error" : r));
-      return;
-    }
-    setRuntime("ready");
-    const passed = result.results.length > 0 && result.results.every((t) => t.ok);
-    if (submit) {
-      if (passed) {
-        await onPassed({ hintsUsed, peekedSolution: peeked });
-      } else {
-        setNote("Submit blocked — every hidden test has to pass, like LeetCode.");
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    const measure = () => {
+      const next = Math.max(280, Math.round(el.getBoundingClientRect().height));
+      setEditorPx(next);
+      monacoRef.current?.layout();
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [plain]);
+
+  const run = useCallback(
+    async (submit: boolean) => {
+      if (!spec) return;
+      setBusy(true);
+      setNote(null);
+      const result = await runUserCode(codeRef.current, spec.tests);
+      setOutcome(result);
+      setBusy(false);
+      if (result.error) {
+        setRuntime((r) => (r === "loading" ? "error" : r));
+        return;
       }
-    }
-  }, [hintsUsed, onPassed, peeked, spec]);
+      setRuntime("ready");
+      const allPassed = result.results.length > 0 && result.results.every((t) => t.ok);
+      if (submit) {
+        if (allPassed) {
+          await onPassed({ hintsUsed, peekedSolution: peeked });
+        } else {
+          setNote("Submit blocked — every hidden test has to pass, like LeetCode.");
+        }
+      }
+    },
+    [hintsUsed, onPassed, peeked, spec],
+  );
 
   const onMount: OnMount = (editor, monaco) => {
+    monacoRef.current = editor;
+    editor.layout();
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       void run(false);
     });
@@ -118,7 +160,7 @@ export function CodeLab({
   const failed = results.some((t) => !t.ok);
 
   return (
-    <section className="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-2xl border border-violet-500/25 bg-ink-900/80">
+    <section className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border border-violet-500/25 bg-ink-900/80">
       <header className="flex flex-wrap items-center gap-2 border-b border-violet-500/20 px-4 py-2">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-gold-400">Python 3</span>
         <span className="font-mono text-[11px] text-paper/45">
@@ -126,29 +168,63 @@ export function CodeLab({
           {runtime === "ready" && "Runtime ready · hidden tests"}
           {runtime === "error" && "Runtime issue — hit Run to retry"}
         </span>
-        <span className="ml-auto font-mono text-[11px] text-paper/35">Ctrl/⌘ + Enter to run</span>
+        <span className="ml-auto hidden font-mono text-[11px] text-paper/35 sm:inline">Ctrl/⌘ + Enter to run</span>
       </header>
-      <div className="min-h-[240px] flex-1">
-        <Editor
-          height="100%"
-          defaultLanguage="python"
-          theme="vs-dark"
-          value={code}
-          onChange={(value) => setCode(value ?? "")}
-          onMount={onMount}
-          options={{
-            minimap: { enabled: false },
-            fontSize: 14,
-            tabSize: 4,
-            insertSpaces: true,
-            wordWrap: "on",
-            automaticLayout: true,
-            scrollBeyondLastLine: false,
-            padding: { top: 12, bottom: 12 },
-            fontFamily: "IBM Plex Mono, ui-monospace, monospace",
-          }}
-          loading={<p className="p-4 font-mono text-xs text-paper/50">Loading editor…</p>}
-        />
+      <div ref={hostRef} className="dojo-editor-host">
+        {plain ? (
+          <textarea
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Tab") {
+                e.preventDefault();
+                const t = e.currentTarget;
+                const start = t.selectionStart;
+                const end = t.selectionEnd;
+                const next = `${code.slice(0, start)}    ${code.slice(end)}`;
+                setCode(next);
+                requestAnimationFrame(() => {
+                  t.selectionStart = t.selectionEnd = start + 4;
+                });
+              }
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault();
+                void run(false);
+              }
+            }}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="off"
+            wrap="off"
+            aria-label="Python editor"
+            className="dojo-plain-editor"
+          />
+        ) : (
+          <Editor
+            height={editorPx}
+            defaultLanguage="python"
+            theme="vs-dark"
+            value={code}
+            onChange={(value) => setCode(value ?? "")}
+            onMount={onMount}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+              tabSize: 4,
+              insertSpaces: true,
+              wordWrap: "off",
+              automaticLayout: true,
+              scrollBeyondLastLine: false,
+              padding: { top: 12, bottom: 12 },
+              fontFamily: "IBM Plex Mono, ui-monospace, monospace",
+              scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
+              overviewRulerLanes: 0,
+              hideCursorInOverviewRuler: true,
+            }}
+            loading={<p className="p-4 font-mono text-xs text-paper/50">Loading editor…</p>}
+          />
+        )}
       </div>
       <div className="border-t border-violet-500/20 p-3">
         <div className="flex flex-wrap items-center gap-2">

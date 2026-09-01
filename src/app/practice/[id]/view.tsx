@@ -46,7 +46,7 @@ export function ProblemView({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-4 xl:h-[calc(100vh-8.5rem)] xl:flex-row">
-      <div className="flex min-h-0 w-full flex-col gap-4 overflow-y-auto xl:w-[42%] xl:min-w-[22rem]">
+      <div className="order-2 flex min-h-0 w-full flex-col gap-4 overflow-y-auto xl:order-1 xl:w-[42%] xl:min-w-[22rem]">
         <article className="rounded-2xl bg-paper p-5 text-ink-950 shadow-dojo md:p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-violet-700">
             {problem.leetcode ? `LC ${problem.leetcode.number} · ` : ""}
@@ -132,15 +132,17 @@ export function ProblemView({ id }: { id: string }) {
           ← All problems
         </Link>
       </div>
-      <CodeLab
-        problemId={problem.id}
-        hintsUsed={hintsOpen}
-        peeked={peeked}
-        onPeekChange={setPeeked}
-        onPassed={onPassed}
-        flash={flash}
-        alreadySolved={Boolean(record)}
-      />
+      <div className="order-1 flex min-h-0 min-w-0 flex-1 xl:order-2">
+        <CodeLab
+          problemId={problem.id}
+          hintsUsed={hintsOpen}
+          peeked={peeked}
+          onPeekChange={setPeeked}
+          onPassed={onPassed}
+          flash={flash}
+          alreadySolved={Boolean(record)}
+        />
+      </div>
     </div>
   );
 }

@@ -24,3 +24,46 @@ body {
 .hud-bar {
   background: linear-gradient(90deg, #e2b857, #f3e0a8 55%, #8b5cf6);
 }
+
+.dojo-editor-host {
+  position: relative;
+  width: 100%;
+  height: min(28rem, 62svh);
+  min-height: 16rem;
+  overflow: hidden;
+  background: #1e1e1e;
+}
+
+.dojo-editor-host .monaco-editor,
+.dojo-editor-host .overflow-guard {
+  height: 100% !important;
+}
+
+.dojo-plain-editor {
+  display: block;
+  width: 100%;
+  height: 100%;
+  resize: none;
+  border: 0;
+  margin: 0;
+  padding: 0.9rem 1rem;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 4;
+  outline: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (min-width: 1280px) {
+  .dojo-editor-host {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 20rem;
+  }
+}
