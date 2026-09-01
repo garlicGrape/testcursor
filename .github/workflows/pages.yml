@@ -4,14 +4,12 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 concurrency:
   group: pages
   cancel-in-progress: true
 jobs:
-  build:
+  build-and-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,15 +22,12 @@ jobs:
         env:
           GITHUB_PAGES: "true"
           GITHUB_REPOSITORY: ${{ github.repository }}
-      - uses: actions/upload-pages-artifact@v3
+      - name: Keep Pages from ignoring _next
+        run: touch out/.nojekyll
+      - name: Publish gh-pages branch
+        uses: JamesIves/github-pages-deploy-action@v4.6.8
         with:
-          path: out
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - id: deploy
-        uses: actions/deploy-pages@v4
+          folder: out
+          branch: gh-pages
+          clean: true
+          single-commit: true
