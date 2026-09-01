@@ -44,3 +44,5 @@ python -m dojo solve pair-sum
 ```
 
 Dashboard (from repo root): `npm install && npm run dev` → http://localhost:3000
+
+They can also write Python in the hosted editor (hidden tests, Run / Submit). Still do not dump a full solution into the editor for them unless they ask.

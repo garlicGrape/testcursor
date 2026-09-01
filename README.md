@@ -15,7 +15,9 @@ Turn the site on once:
 
 Later pushes to `main` rebuild `gh-pages` automatically.
 
-Your XP, streak, and badges live in **this browser** (`localStorage`). They do not sync across phones unless you use the same browser profile. The Python CLI (`python -m dojo solve`) is still local-only — on the hosted site, log solves with **I solved it**.
+Your XP, streak, and badges live in **this browser** (`localStorage`). They do not sync across phones unless you use the same browser profile.
+
+**Code in the app:** every problem has a Python editor and hidden tests (Pyodide in a Web Worker). **Run** checks tests. **Submit** banks XP only when they all pass. First load downloads a Python runtime from jsDelivr (~10s). The CLI (`python -m dojo solve`) is still available locally.
 
 ## Or run it locally
 
@@ -41,12 +43,12 @@ Open [http://localhost:3000](http://localhost:3000).
    The repo rule in `.cursor/rules/interview-coach.mdc` keeps the agent in Socratic mode. Spoilers live in `spoilers/` — do not open that folder.
 
 3. **Bank XP when tests pass**
+   Write the function in the in-app editor and click **Submit**. Optional local CLI:
    ```bash
    python -m dojo solve pair-sum
    python -m dojo status
    python -m dojo hint pair-sum
    ```
-   Then click **I solved it** / **Local tests passed** on the problem page so the dashboard matches the CLI.
 
 4. **Study on purpose**
    The Study tab is a library for the rest of the loop: NeetCode roadmap, Grind 75, SQL (DS rounds), stats, ML system design, behavioral STAR, mock interviews. Coding is necessary; it is not the whole interview.
@@ -64,7 +66,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Ranks follow the interview pipeline: Applicant → OA Ready → Phone Screen → Onsite → Offer Loop → Staff Candidate → Hired.
 
-Local problems (with `pytest`) live under `problems/`. Everything else is tracked against the official LeetCode slug so you can grind on the real site.
+Every catalog problem is runnable in the browser editor. Local `pytest` copies still live under `problems/` if you prefer the CLI. Official LeetCode slugs are linked for the real site.
 
 ## Project map
 
