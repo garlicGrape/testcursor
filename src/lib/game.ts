@@ -13,6 +13,7 @@ export function emptyProgress(): Progress {
     achievements: [],
     questLog: {},
     reviewCount: 0,
+    coachSessions: 0,
   };
 }
 
@@ -105,6 +106,9 @@ export function evaluateAchievements(progress: Progress): string[] {
   if (progress.resourcesRead.length >= 5) add("librarian");
   if (progress.reviewCount >= 3) add("reviewer");
   if (solvedIds.length >= 12) add("catalog-12");
+  if (solvedIds.length >= 40) add("catalog-40");
+  if (countSolved(progress, (p) => (p.kind ?? "python") === "sql") >= 3) add("sql-3");
+  if ((progress.coachSessions ?? 0) >= 3) add("coach-3");
   return Array.from(unlocked);
 }
 
@@ -173,6 +177,14 @@ export function recordResource(progress: Progress, resourceId: string, now = new
 
 export function recordReview(progress: Progress, now = new Date()): Progress {
   let next: Progress = { ...bumpStreak(progress, todayStamp(now)), reviewCount: progress.reviewCount + 1 };
+  return grantNewAchievements(next).progress;
+}
+
+export function recordCoach(progress: Progress, now = new Date()): Progress {
+  let next: Progress = {
+    ...bumpStreak(progress, todayStamp(now)),
+    coachSessions: (progress.coachSessions ?? 0) + 1,
+  };
   return grantNewAchievements(next).progress;
 }
 

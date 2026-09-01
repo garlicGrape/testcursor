@@ -17,7 +17,7 @@ Later pushes to `main` rebuild `gh-pages` automatically.
 
 Your XP, streak, and badges live in **this browser** (`localStorage`). They do not sync across phones unless you use the same browser profile.
 
-**Code in the app:** every problem has a Python editor and hidden tests (Pyodide in a Web Worker). **Run** checks tests. **Submit** banks XP only when they all pass. First load downloads a Python runtime from jsDelivr (~10s). The CLI (`python -m dojo solve`) is still available locally.
+**Code in the app:** Python problems run in Pyodide; SQL problems run in SQLite (sql.js). **Run** checks hidden tests. **Submit** banks XP only when they all pass. Each problem also has a **mock interviewer** that reads your test output and asks Socratic questions (it will not dump solutions). First load downloads the runtime from jsDelivr.
 
 ## Or run it locally
 

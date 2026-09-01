@@ -1,5 +1,7 @@
 import type { Problem } from "./types";
 import { USER_LIST_PROBLEMS } from "./onsiteList";
+import { GRIND_PROBLEMS } from "./grindList";
+import { SQL_PROBLEMS } from "./sqlProblems";
 
 export const PROBLEMS: Problem[] = [
   {
@@ -607,6 +609,8 @@ export const PROBLEMS: Problem[] = [
     interviewNote: "Calendar / analytics interviews use this constantly. Sort-then-sweep is the line.",
   },
   ...USER_LIST_PROBLEMS,
+  ...GRIND_PROBLEMS,
+  ...SQL_PROBLEMS,
 ];
 
 export const PROBLEM_BY_ID = Object.fromEntries(PROBLEMS.map((p) => [p.id, p]));

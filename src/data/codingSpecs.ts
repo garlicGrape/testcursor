@@ -1,6 +1,7 @@
 import { casesToTests, type CodingSpec } from "@/lib/harness";
+import { GRIND_CODING } from "./grindSpecs";
 
-const LIST_HELPERS = `from typing import List, Optional
+export const LIST_HELPERS = `from typing import List, Optional
 
 class ListNode:
     def __init__(self, val: int = 0, next: Optional["ListNode"] = None):
@@ -23,7 +24,7 @@ def _to_list(head):
     return out
 `;
 
-const TREE_HELPERS = `from typing import Optional, List
+export const TREE_HELPERS = `from typing import Optional, List
 
 class TreeNode:
     def __init__(self, val: int = 0, left: Optional["TreeNode"] = None, right: Optional["TreeNode"] = None):
@@ -65,7 +66,7 @@ def _vals(root):
     return out
 `;
 
-function spec(
+export function spec(
   starter: string,
   cases: { name: string; got: string; want: string }[],
   preamble = "",
@@ -699,6 +700,8 @@ def num_matching_subseq(s: str, words: List[str]) -> int:
     [{ name: "example", got: 'num_matching_subseq("abcde", ["a", "bb", "acd", "ace"])', want: "3" }],
   ),
 };
+
+Object.assign(CODING, GRIND_CODING);
 
 export function getCoding(id: string): CodingSpec | undefined {
   return CODING[id];

@@ -7,6 +7,7 @@ import {
   recordReview,
   recordSolve,
   recordStudy,
+  recordCoach,
 } from "@/lib/game";
 
 export const PROGRESS_KEY = "interview-dojo-progress";
@@ -16,7 +17,8 @@ export type ProgressAction =
   | { action: "study"; patternId: PatternId }
   | { action: "resource"; resourceId: string }
   | { action: "quest"; questId: string }
-  | { action: "review" };
+  | { action: "review" }
+  | { action: "coach" };
 
 export function loadProgress(): Progress {
   if (typeof window === "undefined") return emptyProgress();
@@ -60,6 +62,9 @@ export function applyProgressAction(
   }
   if (body.action === "review") {
     return { progress: recordReview(progress), extra: {} };
+  }
+  if (body.action === "coach") {
+    return { progress: recordCoach(progress), extra: {} };
   }
   return { progress, extra: { error: "unknown action" } };
 }
