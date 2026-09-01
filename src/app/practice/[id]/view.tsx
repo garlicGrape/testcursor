@@ -24,9 +24,15 @@ export function ProblemView({ id }: { id: string }) {
     async (opts: { hintsUsed: number; peekedSolution: boolean }) => {
       const data = await solve(id, { ...opts, localPass: true });
       if (data.firstSolve) {
+        const questBit =
+          Array.isArray(data.claimedQuests) && data.claimedQuests.length
+            ? ` · quest: ${data.claimedQuests.join(", ")}`
+            : "";
         setFlash(
-          `First solve +${data.xpEarned} XP${Array.isArray(data.newly) && data.newly.length ? ` · badges: ${data.newly.join(", ")}` : ""}`,
+          `First solve +${data.xpEarned} XP${Array.isArray(data.newly) && data.newly.length ? ` · badges: ${data.newly.join(", ")}` : ""}${questBit}`,
         );
+      } else if (Array.isArray(data.claimedQuests) && data.claimedQuests.length) {
+        setFlash(`Tests passed · quest complete: ${data.claimedQuests.join(", ")}`);
       } else {
         setFlash("Already solved — tests still passed.");
       }

@@ -3,12 +3,15 @@ import { PROBLEMS } from "../data/problems";
 import { ACHIEVEMENTS, XP_PER_LEVEL } from "../data/types";
 import {
   bumpStreak,
+  completeQuest,
   dailyQuests,
   emptyProgress,
   hintMultiplier,
+  isQuestDone,
   levelFromXp,
   rankForLevel,
   recordSolve,
+  withDailyPin,
   xpForSolve,
 } from "./game";
 
@@ -86,12 +89,44 @@ describe("recordSolve", () => {
 
 describe("daily quests", () => {
   it("returns four stable quests for a given day including a SQL drill", () => {
-    const a = dailyQuests(emptyProgress(), "2026-08-22");
-    const b = dailyQuests(emptyProgress(), "2026-08-22");
+    const pinned = withDailyPin(emptyProgress(), "2026-08-22");
+    const a = dailyQuests(pinned, "2026-08-22");
+    const b = dailyQuests(pinned, "2026-08-22");
     expect(a).toHaveLength(4);
     expect(a.map((q) => q.id)).toEqual(b.map((q) => q.id));
     expect(a.some((q) => q.id.startsWith("sql-"))).toBe(true);
     expect(a.find((q) => q.id.startsWith("sql-"))?.href).toMatch(/\/practice\/sql-/);
+  });
+
+  it("does not pay quest XP from a Claim with no work", () => {
+    const pinned = withDailyPin(emptyProgress(), "2026-08-22");
+    const quest = dailyQuests(pinned, "2026-08-22")[0];
+    const next = completeQuest(pinned, quest.id, "2026-08-22");
+    expect(next.xp).toBe(0);
+    expect(isQuestDone(next, quest.id, "2026-08-22")).toBe(false);
+  });
+
+  it("pays the solve quest only after a passing submit", () => {
+    const today = "2026-08-22";
+    const pinned = withDailyPin(emptyProgress(), today);
+    const quest = dailyQuests(pinned, today).find((q) => q.id === `solve-${today}`)!;
+    const problem = PROBLEMS.find((p) => p.id === quest.targetId)!;
+    const failed = recordSolve(pinned, problem, {
+      hintsUsed: 0,
+      peekedSolution: false,
+      localPass: false,
+      now: new Date("2026-08-22T15:00:00Z"),
+    });
+    expect(isQuestDone(failed.progress, quest.id, today)).toBe(false);
+    const passed = recordSolve(pinned, problem, {
+      hintsUsed: 0,
+      peekedSolution: false,
+      localPass: true,
+      now: new Date("2026-08-22T15:00:00Z"),
+    });
+    expect(isQuestDone(passed.progress, quest.id, today)).toBe(true);
+    expect(passed.claimedQuests.some((q) => q.id === quest.id)).toBe(true);
+    expect(passed.progress.xp).toBeGreaterThan(problem.xp);
   });
 });
 
