@@ -1,4 +1,5 @@
-import type { TestResult } from "./harness";
+import type { ResultTable, TestResult } from "./harness";
+import { stringifyCell } from "./sqlPreview";
 
 export interface SqlTable {
   columns: string[];
@@ -26,20 +27,17 @@ export function normalizeTable(table: SqlTable, orderMatters: boolean): { column
   return { columns, rows };
 }
 
-function stringifyCell(cell: unknown): string {
-  if (cell === null || cell === undefined) return "NULL";
-  if (typeof cell === "number" && Number.isFinite(cell)) {
-    const rounded = Math.round(cell * 10000) / 10000;
-    return Number.isInteger(rounded) ? String(rounded) : String(rounded);
-  }
-  return String(cell);
-}
-
-export function compareTables(got: SqlTable, want: SqlTable, orderMatters: boolean): { ok: boolean; got: string; want: string } {
+export function compareTables(
+  got: SqlTable,
+  want: SqlTable,
+  orderMatters: boolean,
+): { ok: boolean; got: string; want: string; gotTable: ResultTable; wantTable: ResultTable } {
   const a = normalizeTable(got, orderMatters);
   const b = normalizeTable(want, orderMatters);
   const ok = JSON.stringify(a) === JSON.stringify(b);
-  return { ok, got: formatTable(a), want: formatTable(b) };
+  const gotTable = { columns: got.columns, rows: got.rows.map((row) => row.map((cell) => stringifyCell(cell))) };
+  const wantTable = { columns: want.columns, rows: want.rows.map((row) => row.map((cell) => stringifyCell(cell))) };
+  return { ok, got: formatTable(a), want: formatTable(b), gotTable, wantTable };
 }
 
 function formatTable(t: { columns: string[]; rows: string[][] }): string {
@@ -57,6 +55,16 @@ export function resultFromExec(tables: { columns: string[]; values: unknown[][] 
   return { columns: first.columns, rows: first.values };
 }
 
-export function toTestResult(name: string, cmp: { ok: boolean; got: string; want: string }): TestResult {
-  return { name, ok: cmp.ok, got: cmp.got, want: cmp.want };
+export function toTestResult(
+  name: string,
+  cmp: { ok: boolean; got: string; want: string; gotTable?: ResultTable; wantTable?: ResultTable },
+): TestResult {
+  return {
+    name,
+    ok: cmp.ok,
+    got: cmp.got,
+    want: cmp.want,
+    gotTable: cmp.gotTable,
+    wantTable: cmp.wantTable,
+  };
 }

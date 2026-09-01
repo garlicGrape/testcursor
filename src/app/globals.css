@@ -60,10 +60,22 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+.dojo-editor-host-sql {
+  height: min(20rem, 42svh);
+  min-height: 12rem;
+  flex: 0 0 auto;
+}
+
 @media (min-width: 1280px) {
   .dojo-editor-host {
     flex: 1 1 auto;
     height: auto;
     min-height: 20rem;
+  }
+
+  .dojo-editor-host-sql {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 16rem;
   }
 }

@@ -432,5 +432,7 @@ INSERT INTO Seat VALUES (1,'Abbot'),(2,'Doris'),(3,'Emerson'),(4,'Green'),(5,'Je
 };
 
 export function getSqlSpec(id: string): SqlSpec | undefined {
-  return SQL_SPECS[id];
+  const spec = SQL_SPECS[id];
+  if (!spec) return undefined;
+  return spec;
 }
