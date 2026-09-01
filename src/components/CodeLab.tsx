@@ -26,8 +26,8 @@ function prefersPlainEditor(): boolean {
   if (typeof window === "undefined") return true;
   const ua = navigator.userAgent;
   if (/iPhone|iPad|iPod|Android/i.test(ua)) return true;
-  if (window.matchMedia("(pointer: coarse)").matches && window.innerWidth < 1024) return true;
-  return window.innerWidth < 768;
+  if (window.matchMedia("(pointer: coarse)").matches) return true;
+  return window.innerWidth < 900;
 }
 
 export function CodeLab({
@@ -53,7 +53,10 @@ export function CodeLab({
   codeRef.current = code;
 
   useEffect(() => {
-    setPlain(prefersPlainEditor());
+    const apply = () => setPlain(prefersPlainEditor());
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
   }, []);
 
   useEffect(() => {
@@ -210,7 +213,7 @@ export function CodeLab({
               fontSize: 14,
               tabSize: 4,
               insertSpaces: true,
-              wordWrap: "on",
+              wordWrap: "off",
               automaticLayout: true,
               scrollBeyondLastLine: false,
               padding: { top: 12, bottom: 12 },
