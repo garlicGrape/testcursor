@@ -1,29 +1,42 @@
 # Interview Dojo
 
-Gamified LeetCode practice for **job interviews** — coding rounds for SWE, data science, and MLE. XP, streaks, daily quests, pattern guides, and a Cursor coach that refuses to spoil the problem until you have a plan.
+Gamified LeetCode practice for **job interviews**. Use it in the browser on GitHub Pages — you do not have to run anything locally for the dashboard.
+
+## Use it hosted (no local install)
+
+After this PR is merged, turn on Pages once:
+
+1. Repo **Settings → Pages → Source: GitHub Actions**
+2. The `pages` workflow publishes the site to  
+   **https://garlicgrape.github.io/testcursor/**
+3. Later pushes to `main` rebuild it automatically.
+
+Your XP, streak, and badges live in **this browser** (`localStorage`). They do not sync across phones unless you use the same browser profile. The Python CLI (`python -m dojo solve`) is still local-only — on the hosted site, log solves with **I solved it**.
+
+## Or run it locally
+
+```bash
+python3 -m pip install -r requirements.txt
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
 
 ## What you should actually do
 
-1. **Start the board**
-   ```bash
-   python3 -m pip install -r requirements.txt
-   npm install
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000). That is the game layer: rank, streak, quests, study library.
-
-2. **Do the daily loop (about 45–70 minutes)**
+1. **Do the daily loop (about 45–70 minutes)**
    - One **new** problem from Practice (or the recommended card on the board).
    - One **pattern** guide in Patterns — mark it studied when you can recap the template from memory.
    - One **review**: re-solve a previous problem with the tab closed.
 
-3. **Use the Cursor coach, not ChatGPT-paste**
+2. **Use the Cursor coach, not ChatGPT-paste**
    Open the starter in `problems/<id>/solution.py` and say:
    > Coach me on pair-sum for a phone screen. Do not give me the solution. Ask me for the pattern and complexity first.
 
    The repo rule in `.cursor/rules/interview-coach.mdc` keeps the agent in Socratic mode. Spoilers live in `spoilers/` — do not open that folder.
 
-4. **Bank XP when tests pass**
+3. **Bank XP when tests pass**
    ```bash
    python -m dojo solve pair-sum
    python -m dojo status
@@ -31,7 +44,7 @@ Gamified LeetCode practice for **job interviews** — coding rounds for SWE, dat
    ```
    Then click **I solved it** / **Local tests passed** on the problem page so the dashboard matches the CLI.
 
-5. **Study on purpose**
+4. **Study on purpose**
    The Study tab is a library for the rest of the loop: NeetCode roadmap, Grind 75, SQL (DS rounds), stats, ML system design, behavioral STAR, mock interviews. Coding is necessary; it is not the whole interview.
 
 ## How the game works

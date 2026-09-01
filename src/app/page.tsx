@@ -30,6 +30,9 @@ export default function BoardPage() {
             Rank: {rank.title} · {solved} solved · {progress.achievements.length} badges
           </p>
         )}
+        <p className="mt-3 text-sm text-paper/45">
+          Progress is saved in this browser (no login). Same laptop + same browser = your streak stays.
+        </p>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
