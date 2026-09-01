@@ -46,7 +46,8 @@ export function hintMultiplier(hintsUsed: number, peekedSolution: boolean): numb
   return 0.5;
 }
 
-export function xpForSolve(problem: Problem, hintsUsed: number, peekedSolution: boolean): number {
+export function xpForSolve(problem: Problem, hintsUsed: number, peekedSolution: boolean, localPass = true): number {
+  if (!localPass) return 0;
   const base = problem.xp || DIFFICULTY_XP[problem.difficulty];
   return Math.max(10, Math.round(base * hintMultiplier(hintsUsed, peekedSolution)));
 }
@@ -68,20 +69,20 @@ export function patternMastery(progress: Progress): Record<PatternId, { solved: 
     const bucket = PROBLEMS.filter((p) => p.patterns.includes(guide.id) || p.pattern === guide.id);
     out[guide.id] = {
       total: bucket.length,
-      solved: bucket.filter((p) => progress.solved[p.id]).length,
+      solved: bucket.filter((p) => progress.solved[p.id]?.localPass).length,
     };
   }
   return out;
 }
 
 function countSolved(progress: Progress, pred: (p: Problem) => boolean): number {
-  return PROBLEMS.filter((p) => progress.solved[p.id] && pred(p)).length;
+  return PROBLEMS.filter((p) => progress.solved[p.id]?.localPass && pred(p)).length;
 }
 
 export function evaluateAchievements(progress: Progress): string[] {
   const unlocked = new Set(progress.achievements);
   const add = (id: string) => unlocked.add(id);
-  const solvedIds = Object.keys(progress.solved);
+  const solvedIds = Object.keys(progress.solved).filter((id) => progress.solved[id]?.localPass);
   if (solvedIds.length >= 1) add("first-blood");
   if (progress.streak >= 3) add("streak-3");
   if (progress.streak >= 7) add("streak-7");
@@ -94,10 +95,9 @@ export function evaluateAchievements(progress: Progress): string[] {
   if (countSolved(progress, (p) => p.pattern === "graphs") >= 2) add("graph-2");
   if (countSolved(progress, (p) => p.pattern === "dp") >= 2) add("dp-2");
   if (
-    Object.values(progress.solved).some((s, i) => {
-      const id = solvedIds[i];
-      const problem = PROBLEMS.find((p) => p.id === id);
-      return problem?.difficulty === "medium" && s.hintsUsed === 0 && !s.peekedSolution;
+    Object.entries(progress.solved).some(([id, s]) => {
+      const problem = PROBLEM_BY_ID[id];
+      return Boolean(s.localPass && problem?.difficulty === "medium" && s.hintsUsed === 0 && !s.peekedSolution);
     })
   ) {
     add("no-hints");
@@ -132,8 +132,8 @@ export function recordSolve(
 ): { progress: Progress; xpEarned: number; firstSolve: boolean; newly: string[]; claimedQuests: DailyQuest[] } {
   const today = todayStamp(opts.now);
   const firstSolve = !progress.solved[problem.id];
-  let next = bumpStreak(progress, today);
-  const xpEarned = firstSolve ? xpForSolve(problem, opts.hintsUsed, opts.peekedSolution) : 0;
+  let next = opts.localPass ? bumpStreak(progress, today) : progress;
+  const xpEarned = firstSolve ? xpForSolve(problem, opts.hintsUsed, opts.peekedSolution, opts.localPass) : 0;
   const record: SolveRecord = next.solved[problem.id]
     ? {
         ...next.solved[problem.id],
@@ -161,7 +161,7 @@ export function recordSolve(
 }
 
 export function recordStudy(progress: Progress, patternId: PatternId, now = new Date()): Progress {
-  if (progress.studied[patternId]) return bumpStreak(progress, todayStamp(now));
+  if (progress.studied[patternId]) return progress;
   const guide = PATTERNS.find((p) => p.id === patternId);
   let next: Progress = {
     ...bumpStreak(progress, todayStamp(now)),
@@ -181,17 +181,30 @@ export function recordResource(progress: Progress, resourceId: string, now = new
   return grantNewAchievements(next).progress;
 }
 
-export function recordReview(progress: Progress, now = new Date()): Progress {
-  let next: Progress = { ...bumpStreak(progress, todayStamp(now)), reviewCount: progress.reviewCount + 1 };
-  return grantNewAchievements(next).progress;
+export function recordReview(progress: Progress): Progress {
+  return progress;
 }
 
 export function recordCoach(progress: Progress, now = new Date()): Progress {
   let next: Progress = {
-    ...bumpStreak(progress, todayStamp(now)),
+    ...progress,
     coachSessions: (progress.coachSessions ?? 0) + 1,
   };
   return grantNewAchievements(next).progress;
+}
+
+export function nextProblem(progress: Progress, currentId: string): Problem {
+  const current = PROBLEM_BY_ID[currentId];
+  const unsolved = PROBLEMS.filter((p) => p.id !== currentId && !progress.solved[p.id]?.localPass);
+  const sameKind = unsolved.filter((p) => (p.kind ?? "python") === (current?.kind ?? "python"));
+  const samePattern = sameKind.filter((p) => p.pattern === current?.pattern);
+  return (
+    samePattern[0] ??
+    sameKind.find((p) => p.difficulty === current?.difficulty) ??
+    sameKind[0] ??
+    unsolved[0] ??
+    PROBLEMS[0]
+  );
 }
 
 export type QuestKind = "solve" | "study" | "review";
@@ -224,15 +237,17 @@ export function pickDailyTargets(progress: Progress, today = todayStamp()): Dail
   const seed = hashDay(today);
   const python = PROBLEMS.filter((p) => (p.kind ?? "python") === "python");
   const sql = PROBLEMS.filter((p) => p.kind === "sql");
-  const pythonOpen = python.filter((p) => !progress.solved[p.id]);
-  const sqlOpen = sql.filter((p) => !progress.solved[p.id]);
+  const pythonOpen = python.filter((p) => !progress.solved[p.id]?.localPass);
+  const sqlOpen = sql.filter((p) => !progress.solved[p.id]?.localPass);
   const unstudied = PATTERNS.filter((p) => !progress.studied[p.id]);
-  const solvedIds = Object.keys(progress.solved);
+  const dueIds = reviewSchedule(progress, today).due.map((item) => item.problem.id);
+  const passedIds = Object.keys(progress.solved).filter((id) => progress.solved[id]?.localPass);
+  const reviewPool = dueIds.length ? dueIds : passedIds.length ? passedIds : python.map((p) => p.id);
   return {
     solve: pickFrom(pythonOpen.length ? pythonOpen : python, seed).id,
     sql: pickFrom(sqlOpen.length ? sqlOpen : sql, seed + 11).id,
     study: pickFrom(unstudied.length ? unstudied : PATTERNS, seed + 23).id,
-    review: pickFrom(solvedIds.length ? solvedIds : python.map((p) => p.id), seed + 41),
+    review: pickFrom(reviewPool, seed + 41),
   };
 }
 
@@ -353,6 +368,70 @@ export function isQuestDone(progress: Progress, questId: string, today = todaySt
   return Boolean(progress.questLog[today]?.includes(questId));
 }
 
+export function addUtcDays(stamp: string, days: number): string {
+  const next = new Date(`${stamp}T12:00:00.000Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+export function daysBetweenStamps(from: string, to: string): number {
+  const a = Date.parse(`${from}T12:00:00.000Z`);
+  const b = Date.parse(`${to}T12:00:00.000Z`);
+  return Math.round((b - a) / 86_400_000);
+}
+
+export function reviewIntervalDays(problem: Problem, record: SolveRecord): number {
+  if (!record.localPass) return 0;
+  const passes = Math.max(1, record.attempts);
+  const base = problem.difficulty === "hard" ? 1 : problem.difficulty === "medium" ? 2 : 3;
+  return Math.min(30, base * 2 ** Math.min(passes - 1, 4));
+}
+
+export interface ReviewItem {
+  problem: Problem;
+  record: SolveRecord;
+  dueOn: string;
+  overdueDays: number;
+}
+
+export function reviewDueOn(problem: Problem, record: SolveRecord): string {
+  const last = record.lastAttemptAt ?? record.solvedAt;
+  return addUtcDays(last, reviewIntervalDays(problem, record));
+}
+
+function toReviewItem(problem: Problem, record: SolveRecord, today: string): ReviewItem {
+  const dueOn = reviewDueOn(problem, record);
+  return { problem, record, dueOn, overdueDays: daysBetweenStamps(dueOn, today) };
+}
+
+export function reviewSchedule(
+  progress: Progress,
+  today = todayStamp(),
+): { due: ReviewItem[]; upcoming: ReviewItem[]; unfinished: ReviewItem[] } {
+  const due: ReviewItem[] = [];
+  const upcoming: ReviewItem[] = [];
+  const unfinished: ReviewItem[] = [];
+  for (const problem of PROBLEMS) {
+    const record = progress.solved[problem.id];
+    if (!record) continue;
+    const item = toReviewItem(problem, record, today);
+    if (!record.localPass) {
+      unfinished.push(item);
+      continue;
+    }
+    if (item.overdueDays >= 0) due.push(item);
+    else if (item.overdueDays >= -7) upcoming.push(item);
+  }
+  due.sort((a, b) => b.overdueDays - a.overdueDays || a.problem.title.localeCompare(b.problem.title));
+  upcoming.sort((a, b) => b.overdueDays - a.overdueDays || a.problem.title.localeCompare(b.problem.title));
+  unfinished.sort((a, b) => b.overdueDays - a.overdueDays || a.problem.title.localeCompare(b.problem.title));
+  return { due, upcoming, unfinished };
+}
+
+export function isDueForReview(progress: Progress, problemId: string, today = todayStamp()): boolean {
+  return reviewSchedule(progress, today).due.some((item) => item.problem.id === problemId);
+}
+
 export function recommendedProblem(progress: Progress): Problem {
   const mastery = patternMastery(progress);
   const weakest = [...PATTERNS].sort((a, b) => {
@@ -363,9 +442,9 @@ export function recommendedProblem(progress: Progress): Problem {
     return ra - rb;
   })[0];
   const candidate =
-    PROBLEMS.find((p) => !progress.solved[p.id] && p.pattern === weakest.id) ??
-    PROBLEMS.find((p) => !progress.solved[p.id] && p.difficulty === "easy") ??
-    PROBLEMS.find((p) => !progress.solved[p.id]) ??
+    PROBLEMS.find((p) => !progress.solved[p.id]?.localPass && p.pattern === weakest.id) ??
+    PROBLEMS.find((p) => !progress.solved[p.id]?.localPass && p.difficulty === "easy") ??
+    PROBLEMS.find((p) => !progress.solved[p.id]?.localPass) ??
     PROBLEMS[0];
   return candidate;
 }

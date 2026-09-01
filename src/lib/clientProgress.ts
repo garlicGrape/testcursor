@@ -71,7 +71,7 @@ export function applyProgressAction(
     return { progress: next, extra: { awarded: next.xp > before } };
   }
   if (body.action === "review") {
-    return { progress: recordReview(pinned), extra: {} };
+    return { progress: recordReview(pinned), extra: { awarded: false } };
   }
   if (body.action === "coach") {
     return { progress: recordCoach(pinned), extra: {} };

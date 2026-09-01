@@ -1,6 +1,7 @@
 "use client";
 
 import { ACHIEVEMENTS } from "@/data/types";
+import { ProgressBackup } from "@/components/ProgressBackup";
 import { useProgress } from "@/components/ProgressProvider";
 
 export default function AchievementsPage() {
@@ -32,6 +33,7 @@ export default function AchievementsPage() {
           );
         })}
       </ul>
+      <ProgressBackup />
     </div>
   );
 }

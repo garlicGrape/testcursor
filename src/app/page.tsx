@@ -1,20 +1,37 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { PATTERNS } from "@/data/types";
 import { ACHIEVEMENTS } from "@/data/types";
-import { PROBLEMS } from "@/data/problems";
-import { dailyQuests, isQuestDone, patternMastery, rankForLevel, recommendedProblem, levelFromXp } from "@/lib/game";
+import { PROBLEMS, PROBLEM_BY_ID } from "@/data/problems";
+import {
+  dailyQuests,
+  isQuestDone,
+  patternMastery,
+  rankForLevel,
+  recommendedProblem,
+  reviewSchedule,
+  levelFromXp,
+} from "@/lib/game";
+import { readLastProblemId } from "@/lib/lastProblem";
 import { useProgress } from "@/components/ProgressProvider";
 
 export default function BoardPage() {
   const { progress, ready } = useProgress();
+  const [lastId, setLastId] = useState<string | null>(null);
   const quests = dailyQuests(progress);
   const rec = recommendedProblem(progress);
   const mastery = patternMastery(progress);
   const rank = rankForLevel(levelFromXp(progress.xp));
-  const solved = Object.keys(progress.solved).length;
+  const solved = Object.keys(progress.solved).filter((id) => progress.solved[id]?.localPass).length;
   const recentBadges = progress.achievements.slice(-3);
+  const dueCount = reviewSchedule(progress).due.length;
+  const last = lastId ? PROBLEM_BY_ID[lastId] : undefined;
+
+  useEffect(() => {
+    setLastId(readLastProblemId());
+  }, []);
 
   return (
     <div className="mx-auto max-w-5xl space-y-10">
@@ -35,6 +52,35 @@ export default function BoardPage() {
           Progress is saved in this browser (no login). Same laptop + same browser = your streak stays.
         </p>
       </section>
+
+      {(last || dueCount > 0) && (
+        <section className="grid gap-3 sm:grid-cols-2">
+          {last && (
+            <Link
+              href={`/practice/${last.id}`}
+              className="rounded-2xl border border-gold-400/30 bg-gold-400/5 px-5 py-4 hover:border-gold-400/60"
+            >
+              <div className="font-mono text-[11px] uppercase tracking-wider text-gold-400">Continue</div>
+              <p className="mt-1 font-display text-xl text-paper">{last.title}</p>
+              <p className="mt-1 font-mono text-xs text-paper/50">
+                {last.kind === "sql" ? "SQL" : "Python"} · {last.difficulty} · last opened in this browser
+              </p>
+            </Link>
+          )}
+          {dueCount > 0 && (
+            <Link
+              href="/review"
+              className="rounded-2xl border border-violet-500/25 bg-ink-900/70 px-5 py-4 hover:border-gold-400/40"
+            >
+              <div className="font-mono text-[11px] uppercase tracking-wider text-gold-400">Spaced review</div>
+              <p className="mt-1 font-display text-xl text-paper">
+                {dueCount} problem{dueCount === 1 ? "" : "s"} due
+              </p>
+              <p className="mt-1 font-mono text-xs text-paper/50">Re-solve from memory, then Submit again.</p>
+            </Link>
+          )}
+        </section>
+      )}
 
       <section className="grid gap-4 md:grid-cols-2">
         {quests.map((q) => {

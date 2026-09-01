@@ -149,6 +149,9 @@ export function CodeLab({
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       void run(false);
     });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => {
+      void run(true);
+    });
   };
 
   if (!spec) {
@@ -172,7 +175,7 @@ export function CodeLab({
           {runtime === "ready" && "Runtime ready · hidden tests"}
           {runtime === "error" && "Runtime issue — hit Run to retry"}
         </span>
-        <span className="ml-auto hidden font-mono text-[11px] text-paper/35 sm:inline">Ctrl/⌘ + Enter to run</span>
+        <span className="ml-auto hidden font-mono text-[11px] text-paper/35 sm:inline">Ctrl/⌘+Enter run · +Shift submit</span>
       </header>
       <div ref={hostRef} className="dojo-editor-host">
         {plain ? (
@@ -193,7 +196,7 @@ export function CodeLab({
               }
               if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
                 e.preventDefault();
-                void run(false);
+                void run(e.shiftKey);
               }
             }}
             spellCheck={false}
