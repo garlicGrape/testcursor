@@ -46,7 +46,8 @@ export function hintMultiplier(hintsUsed: number, peekedSolution: boolean): numb
   return 0.5;
 }
 
-export function xpForSolve(problem: Problem, hintsUsed: number, peekedSolution: boolean): number {
+export function xpForSolve(problem: Problem, hintsUsed: number, peekedSolution: boolean, localPass = true): number {
+  if (!localPass) return 0;
   const base = problem.xp || DIFFICULTY_XP[problem.difficulty];
   return Math.max(10, Math.round(base * hintMultiplier(hintsUsed, peekedSolution)));
 }
@@ -68,20 +69,20 @@ export function patternMastery(progress: Progress): Record<PatternId, { solved: 
     const bucket = PROBLEMS.filter((p) => p.patterns.includes(guide.id) || p.pattern === guide.id);
     out[guide.id] = {
       total: bucket.length,
-      solved: bucket.filter((p) => progress.solved[p.id]).length,
+      solved: bucket.filter((p) => progress.solved[p.id]?.localPass).length,
     };
   }
   return out;
 }
 
 function countSolved(progress: Progress, pred: (p: Problem) => boolean): number {
-  return PROBLEMS.filter((p) => progress.solved[p.id] && pred(p)).length;
+  return PROBLEMS.filter((p) => progress.solved[p.id]?.localPass && pred(p)).length;
 }
 
 export function evaluateAchievements(progress: Progress): string[] {
   const unlocked = new Set(progress.achievements);
   const add = (id: string) => unlocked.add(id);
-  const solvedIds = Object.keys(progress.solved);
+  const solvedIds = Object.keys(progress.solved).filter((id) => progress.solved[id]?.localPass);
   if (solvedIds.length >= 1) add("first-blood");
   if (progress.streak >= 3) add("streak-3");
   if (progress.streak >= 7) add("streak-7");
@@ -94,10 +95,9 @@ export function evaluateAchievements(progress: Progress): string[] {
   if (countSolved(progress, (p) => p.pattern === "graphs") >= 2) add("graph-2");
   if (countSolved(progress, (p) => p.pattern === "dp") >= 2) add("dp-2");
   if (
-    Object.values(progress.solved).some((s, i) => {
-      const id = solvedIds[i];
-      const problem = PROBLEMS.find((p) => p.id === id);
-      return problem?.difficulty === "medium" && s.hintsUsed === 0 && !s.peekedSolution;
+    Object.entries(progress.solved).some(([id, s]) => {
+      const problem = PROBLEM_BY_ID[id];
+      return Boolean(s.localPass && problem?.difficulty === "medium" && s.hintsUsed === 0 && !s.peekedSolution);
     })
   ) {
     add("no-hints");
@@ -132,8 +132,8 @@ export function recordSolve(
 ): { progress: Progress; xpEarned: number; firstSolve: boolean; newly: string[]; claimedQuests: DailyQuest[] } {
   const today = todayStamp(opts.now);
   const firstSolve = !progress.solved[problem.id];
-  let next = bumpStreak(progress, today);
-  const xpEarned = firstSolve ? xpForSolve(problem, opts.hintsUsed, opts.peekedSolution) : 0;
+  let next = opts.localPass ? bumpStreak(progress, today) : progress;
+  const xpEarned = firstSolve ? xpForSolve(problem, opts.hintsUsed, opts.peekedSolution, opts.localPass) : 0;
   const record: SolveRecord = next.solved[problem.id]
     ? {
         ...next.solved[problem.id],
@@ -188,10 +188,24 @@ export function recordReview(progress: Progress, now = new Date()): Progress {
 
 export function recordCoach(progress: Progress, now = new Date()): Progress {
   let next: Progress = {
-    ...bumpStreak(progress, todayStamp(now)),
+    ...progress,
     coachSessions: (progress.coachSessions ?? 0) + 1,
   };
   return grantNewAchievements(next).progress;
+}
+
+export function nextProblem(progress: Progress, currentId: string): Problem {
+  const current = PROBLEM_BY_ID[currentId];
+  const unsolved = PROBLEMS.filter((p) => p.id !== currentId && !progress.solved[p.id]?.localPass);
+  const sameKind = unsolved.filter((p) => (p.kind ?? "python") === (current?.kind ?? "python"));
+  const samePattern = sameKind.filter((p) => p.pattern === current?.pattern);
+  return (
+    samePattern[0] ??
+    sameKind.find((p) => p.difficulty === current?.difficulty) ??
+    sameKind[0] ??
+    unsolved[0] ??
+    PROBLEMS[0]
+  );
 }
 
 export type QuestKind = "solve" | "study" | "review";
@@ -224,8 +238,8 @@ export function pickDailyTargets(progress: Progress, today = todayStamp()): Dail
   const seed = hashDay(today);
   const python = PROBLEMS.filter((p) => (p.kind ?? "python") === "python");
   const sql = PROBLEMS.filter((p) => p.kind === "sql");
-  const pythonOpen = python.filter((p) => !progress.solved[p.id]);
-  const sqlOpen = sql.filter((p) => !progress.solved[p.id]);
+  const pythonOpen = python.filter((p) => !progress.solved[p.id]?.localPass);
+  const sqlOpen = sql.filter((p) => !progress.solved[p.id]?.localPass);
   const unstudied = PATTERNS.filter((p) => !progress.studied[p.id]);
   const solvedIds = Object.keys(progress.solved);
   return {
@@ -363,9 +377,9 @@ export function recommendedProblem(progress: Progress): Problem {
     return ra - rb;
   })[0];
   const candidate =
-    PROBLEMS.find((p) => !progress.solved[p.id] && p.pattern === weakest.id) ??
-    PROBLEMS.find((p) => !progress.solved[p.id] && p.difficulty === "easy") ??
-    PROBLEMS.find((p) => !progress.solved[p.id]) ??
+    PROBLEMS.find((p) => !progress.solved[p.id]?.localPass && p.pattern === weakest.id) ??
+    PROBLEMS.find((p) => !progress.solved[p.id]?.localPass && p.difficulty === "easy") ??
+    PROBLEMS.find((p) => !progress.solved[p.id]?.localPass) ??
     PROBLEMS[0];
   return candidate;
 }

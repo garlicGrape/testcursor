@@ -34,6 +34,6 @@ describe("makeSqlStarter", () => {
     expect(text).toContain("name");
     expect(text).toContain("population");
     expect(text).toContain("area");
-    expect(text.split("\n").length).toBeGreaterThan(6);
+    expect(text).not.toMatch(/TRUE;/);
   });
 });

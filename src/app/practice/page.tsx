@@ -32,7 +32,7 @@ export default function PracticePage() {
         const hay = `${p.title} ${p.id} ${p.pattern} ${p.summary}`.toLowerCase();
         if (!hay.includes(needle)) return false;
       }
-      const done = Boolean(progress.solved[p.id]);
+      const done = Boolean(progress.solved[p.id]?.localPass);
       if (status === "todo" && done) return false;
       if (status === "done" && !done) return false;
       return true;
@@ -108,8 +108,11 @@ export default function PracticePage() {
         Showing {rows.length} / {PROBLEMS.length}
       </p>
       <ul className="mt-3 divide-y divide-violet-500/15 rounded-2xl border border-violet-500/20 bg-ink-900/60">
+        {rows.length === 0 && (
+          <li className="px-4 py-8 text-center text-sm text-paper/55">No problems match those filters. Clear search or switch lists.</li>
+        )}
         {rows.map((p) => {
-          const done = Boolean(progress.solved[p.id]);
+          const done = Boolean(progress.solved[p.id]?.localPass);
           return (
             <li key={p.id}>
               <Link href={`/practice/${p.id}`} className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-ink-800/80">

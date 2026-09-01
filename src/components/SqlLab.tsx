@@ -13,11 +13,11 @@ loader.config({
   paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs" },
 });
 
-const codeKey = (id: string) => `dojo-sql:v2:${id}`;
+const codeKey = (id: string) => `dojo-sql:v3:${id}`;
 
 function isLegacyDraft(code: string): boolean {
   const trimmed = code.trim();
-  return /^SELECT\s+--/i.test(trimmed) && trimmed.split("\n").length <= 2;
+  return (/^SELECT\s+--/i.test(trimmed) && trimmed.split("\n").length <= 2) || /\bTRUE;/.test(trimmed);
 }
 
 type Props = {
@@ -176,7 +176,7 @@ export function SqlLab({
         <span className="ml-auto hidden font-mono text-[11px] text-paper/35 sm:inline">Ctrl/⌘ + Enter to run</span>
       </header>
       <div className="border-b border-violet-500/20 px-3 py-2">
-        <SqlDataset spec={spec} defaultOpen={plain} />
+        <SqlDataset spec={spec} defaultOpen />
       </div>
       <div ref={hostRef} className="dojo-editor-host dojo-editor-host-sql">
         {plain ? (

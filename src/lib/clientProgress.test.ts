@@ -8,10 +8,23 @@ describe("applyProgressAction", () => {
       action: "solve",
       problemId: "pair-sum",
       hintsUsed: 0,
+      localPass: true,
     });
     expect(extra.firstSolve).toBe(true);
     expect(progress.solved["pair-sum"]).toBeTruthy();
     expect(progress.xp).toBeGreaterThan(0);
+  });
+
+  it("gives no XP for an external log without passing tests", () => {
+    const { progress, extra } = applyProgressAction(emptyProgress(), {
+      action: "solve",
+      problemId: "pair-sum",
+      localPass: false,
+    });
+    expect(extra.firstSolve).toBe(true);
+    expect(extra.xpEarned).toBe(0);
+    expect(progress.xp).toBe(0);
+    expect(progress.solved["pair-sum"].localPass).toBe(false);
   });
 
   it("rejects unknown problems", () => {

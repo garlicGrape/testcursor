@@ -8,7 +8,9 @@ import { CodeLab } from "@/components/CodeLab";
 import { SqlLab } from "@/components/SqlLab";
 import { SqlDataset } from "@/components/SqlDataset";
 import { Coach } from "@/components/Coach";
+import { InterviewTimer } from "@/components/InterviewTimer";
 import { getSqlSpec } from "@/data/sqlSpecs";
+import { nextProblem } from "@/lib/game";
 import type { TestResult } from "@/lib/harness";
 
 export function ProblemView({ id }: { id: string }) {
@@ -51,16 +53,13 @@ export function ProblemView({ id }: { id: string }) {
 
   const record = progress.solved[problem.id];
   const isSql = problem.kind === "sql";
+  const next = nextProblem(progress, problem.id);
+  const passedInApp = Boolean(record?.localPass);
 
   async function markExternal() {
     const data = await solve(problem.id, { hintsUsed: hintsOpen, peekedSolution: peeked, localPass: false });
-    if (data.firstSolve) {
-      setFlash(
-        `Logged without in-app tests +${data.xpEarned} XP${Array.isArray(data.newly) && data.newly.length ? ` · badges: ${data.newly.join(", ")}` : ""}`,
-      );
-    } else {
-      setFlash("Already solved — logged another attempt.");
-    }
+    setFlash("Logged as done on LeetCode.com — 0 XP. Submit in the editor to earn XP and quest credit.");
+    void data;
   }
 
   const lab = isSql ? (
@@ -98,6 +97,9 @@ export function ProblemView({ id }: { id: string }) {
             {problem.fromUserList ? " · your list" : ""}
           </p>
           <h1 className="mt-2 font-display text-3xl md:text-4xl">{problem.title}</h1>
+          <div className="mt-4">
+            <InterviewTimer />
+          </div>
           <p className="mt-4 whitespace-pre-wrap leading-relaxed">{problem.prompt}</p>
           {isSql && getSqlSpec(problem.id) ? (
             <div className="mt-6">
@@ -185,8 +187,7 @@ export function ProblemView({ id }: { id: string }) {
         <section className="rounded-2xl border border-violet-500/25 bg-ink-900/70 p-5">
           <h2 className="font-display text-lg">Solved it on LeetCode.com?</h2>
           <p className="mt-1 text-xs text-paper/50">
-            Prefer Submit in the editor — XP from hidden tests is the real loop. This is only if you already passed the
-            official problem.
+            That only marks the row. No XP, no streak, no quest credit — Submit in the editor is the real loop.
           </p>
           <button
             type="button"
@@ -205,6 +206,14 @@ export function ProblemView({ id }: { id: string }) {
         <Link href="/practice" className="inline-block font-mono text-xs text-paper/50">
           ← All problems
         </Link>
+        {passedInApp && (
+          <Link
+            href={`/practice/${next.id}`}
+            className="mt-2 inline-flex rounded-md bg-gold-400 px-4 py-2 font-mono text-sm text-ink-950"
+          >
+            Next: {next.title} →
+          </Link>
+        )}
       </div>
       <div className="order-1 flex min-h-0 min-w-0 flex-1 xl:order-2">{lab}</div>
     </div>

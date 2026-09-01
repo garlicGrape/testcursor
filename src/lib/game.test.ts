@@ -9,6 +9,7 @@ import {
   hintMultiplier,
   isQuestDone,
   levelFromXp,
+  nextProblem,
   rankForLevel,
   recordSolve,
   withDailyPin,
@@ -127,6 +128,19 @@ describe("daily quests", () => {
     expect(isQuestDone(passed.progress, quest.id, today)).toBe(true);
     expect(passed.claimedQuests.some((q) => q.id === quest.id)).toBe(true);
     expect(passed.progress.xp).toBeGreaterThan(problem.xp);
+  });
+
+  it("suggests another unsolved problem of the same kind", () => {
+    const problem = PROBLEMS.find((p) => p.id === "pair-sum")!;
+    const { progress } = recordSolve(emptyProgress(), problem, {
+      hintsUsed: 0,
+      peekedSolution: false,
+      localPass: true,
+      now: new Date("2026-08-22T15:00:00Z"),
+    });
+    const nxt = nextProblem(progress, "pair-sum");
+    expect(nxt.id).not.toBe("pair-sum");
+    expect(progress.solved[nxt.id]?.localPass).not.toBe(true);
   });
 });
 

@@ -150,8 +150,8 @@ export function makeSqlStarter(tables: PreviewTable[], outColumns: string[]): st
     selectCols,
     `FROM ${from}`,
     extra.length ? `-- JOIN ${extra.join(" / ")} ON ...` : null,
-    "WHERE",
-    "  TRUE; -- replace with your filter, or delete WHERE",
+    "-- WHERE ...",
+    ";",
   ];
   return `${lines.filter((l) => l !== null).join("\n")}\n`;
 }
