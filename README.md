@@ -4,12 +4,16 @@ Gamified LeetCode practice for **job interviews**. Use it in the browser on GitH
 
 ## Use it hosted (no local install)
 
-After this PR is merged, turn on Pages once:
+The `pages` workflow publishes a static build to the `gh-pages` branch (it does **not** use `actions/deploy-pages`, which 404s until Pages is already on).
 
-1. Repo **Settings → Pages → Source: GitHub Actions**
-2. The `pages` workflow publishes the site to  
-   **https://garlicgrape.github.io/testcursor/**
-3. Later pushes to `main` rebuild it automatically.
+Turn the site on once:
+
+1. Repo **Settings → Pages**
+2. **Build and deployment → Source:** Deploy from a branch
+3. **Branch:** `gh-pages` / `/ (root)` → Save
+4. Open **https://garlicgrape.github.io/testcursor/**
+
+Later pushes to `main` rebuild `gh-pages` automatically.
 
 Your XP, streak, and badges live in **this browser** (`localStorage`). They do not sync across phones unless you use the same browser profile. The Python CLI (`python -m dojo solve`) is still local-only — on the hosted site, log solves with **I solved it**.
 
