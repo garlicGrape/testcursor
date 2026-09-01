@@ -10,8 +10,11 @@ import {
   isQuestDone,
   levelFromXp,
   nextProblem,
+  pickDailyTargets,
   rankForLevel,
   recordSolve,
+  recordStudy,
+  reviewSchedule,
   withDailyPin,
   xpForSolve,
 } from "./game";
@@ -141,6 +144,56 @@ describe("daily quests", () => {
     const nxt = nextProblem(progress, "pair-sum");
     expect(nxt.id).not.toBe("pair-sum");
     expect(progress.solved[nxt.id]?.localPass).not.toBe(true);
+  });
+});
+
+describe("study and review cadence", () => {
+  it("does not bump streak when a pattern is already studied", () => {
+    const first = recordStudy(emptyProgress(), "hashing", new Date("2026-08-22T15:00:00Z"));
+    const second = recordStudy(
+      { ...first, lastActiveDate: "2026-08-20", streak: 5 },
+      "hashing",
+      new Date("2026-08-22T15:00:00Z"),
+    );
+    expect(second.streak).toBe(5);
+    expect(second.lastActiveDate).toBe("2026-08-20");
+    expect(second.xp).toBe(first.xp);
+  });
+
+  it("keeps a fresh easy pass off the due list until the interval elapses", () => {
+    const problem = PROBLEMS.find((p) => p.id === "pair-sum")!;
+    const { progress } = recordSolve(emptyProgress(), problem, {
+      hintsUsed: 0,
+      peekedSolution: false,
+      localPass: true,
+      now: new Date("2026-08-22T15:00:00Z"),
+    });
+    expect(reviewSchedule(progress, "2026-08-22").due).toHaveLength(0);
+    expect(reviewSchedule(progress, "2026-08-25").due.map((item) => item.problem.id)).toContain("pair-sum");
+  });
+
+  it("puts an external log without a pass in unfinished immediately", () => {
+    const problem = PROBLEMS.find((p) => p.id === "pair-sum")!;
+    const { progress } = recordSolve(emptyProgress(), problem, {
+      hintsUsed: 0,
+      peekedSolution: false,
+      localPass: false,
+      now: new Date("2026-08-22T15:00:00Z"),
+    });
+    expect(reviewSchedule(progress, "2026-08-22").unfinished.map((item) => item.problem.id)).toContain("pair-sum");
+    expect(reviewSchedule(progress, "2026-08-22").due).toHaveLength(0);
+  });
+
+  it("pins the daily review quest to an overdue solve when one exists", () => {
+    const problem = PROBLEMS.find((p) => p.id === "pair-sum")!;
+    const { progress } = recordSolve(emptyProgress(), problem, {
+      hintsUsed: 0,
+      peekedSolution: false,
+      localPass: true,
+      now: new Date("2026-08-01T15:00:00Z"),
+    });
+    const pin = pickDailyTargets(progress, "2026-08-22");
+    expect(pin.review).toBe("pair-sum");
   });
 });
 

@@ -161,7 +161,7 @@ export function recordSolve(
 }
 
 export function recordStudy(progress: Progress, patternId: PatternId, now = new Date()): Progress {
-  if (progress.studied[patternId]) return bumpStreak(progress, todayStamp(now));
+  if (progress.studied[patternId]) return progress;
   const guide = PATTERNS.find((p) => p.id === patternId);
   let next: Progress = {
     ...bumpStreak(progress, todayStamp(now)),
@@ -181,9 +181,8 @@ export function recordResource(progress: Progress, resourceId: string, now = new
   return grantNewAchievements(next).progress;
 }
 
-export function recordReview(progress: Progress, now = new Date()): Progress {
-  let next: Progress = { ...bumpStreak(progress, todayStamp(now)), reviewCount: progress.reviewCount + 1 };
-  return grantNewAchievements(next).progress;
+export function recordReview(progress: Progress): Progress {
+  return progress;
 }
 
 export function recordCoach(progress: Progress, now = new Date()): Progress {
@@ -241,12 +240,14 @@ export function pickDailyTargets(progress: Progress, today = todayStamp()): Dail
   const pythonOpen = python.filter((p) => !progress.solved[p.id]?.localPass);
   const sqlOpen = sql.filter((p) => !progress.solved[p.id]?.localPass);
   const unstudied = PATTERNS.filter((p) => !progress.studied[p.id]);
-  const solvedIds = Object.keys(progress.solved);
+  const dueIds = reviewSchedule(progress, today).due.map((item) => item.problem.id);
+  const passedIds = Object.keys(progress.solved).filter((id) => progress.solved[id]?.localPass);
+  const reviewPool = dueIds.length ? dueIds : passedIds.length ? passedIds : python.map((p) => p.id);
   return {
     solve: pickFrom(pythonOpen.length ? pythonOpen : python, seed).id,
     sql: pickFrom(sqlOpen.length ? sqlOpen : sql, seed + 11).id,
     study: pickFrom(unstudied.length ? unstudied : PATTERNS, seed + 23).id,
-    review: pickFrom(solvedIds.length ? solvedIds : python.map((p) => p.id), seed + 41),
+    review: pickFrom(reviewPool, seed + 41),
   };
 }
 
@@ -365,6 +366,70 @@ export function completeQuest(progress: Progress, questId: string, today = today
 
 export function isQuestDone(progress: Progress, questId: string, today = todayStamp()): boolean {
   return Boolean(progress.questLog[today]?.includes(questId));
+}
+
+export function addUtcDays(stamp: string, days: number): string {
+  const next = new Date(`${stamp}T12:00:00.000Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+export function daysBetweenStamps(from: string, to: string): number {
+  const a = Date.parse(`${from}T12:00:00.000Z`);
+  const b = Date.parse(`${to}T12:00:00.000Z`);
+  return Math.round((b - a) / 86_400_000);
+}
+
+export function reviewIntervalDays(problem: Problem, record: SolveRecord): number {
+  if (!record.localPass) return 0;
+  const passes = Math.max(1, record.attempts);
+  const base = problem.difficulty === "hard" ? 1 : problem.difficulty === "medium" ? 2 : 3;
+  return Math.min(30, base * 2 ** Math.min(passes - 1, 4));
+}
+
+export interface ReviewItem {
+  problem: Problem;
+  record: SolveRecord;
+  dueOn: string;
+  overdueDays: number;
+}
+
+export function reviewDueOn(problem: Problem, record: SolveRecord): string {
+  const last = record.lastAttemptAt ?? record.solvedAt;
+  return addUtcDays(last, reviewIntervalDays(problem, record));
+}
+
+function toReviewItem(problem: Problem, record: SolveRecord, today: string): ReviewItem {
+  const dueOn = reviewDueOn(problem, record);
+  return { problem, record, dueOn, overdueDays: daysBetweenStamps(dueOn, today) };
+}
+
+export function reviewSchedule(
+  progress: Progress,
+  today = todayStamp(),
+): { due: ReviewItem[]; upcoming: ReviewItem[]; unfinished: ReviewItem[] } {
+  const due: ReviewItem[] = [];
+  const upcoming: ReviewItem[] = [];
+  const unfinished: ReviewItem[] = [];
+  for (const problem of PROBLEMS) {
+    const record = progress.solved[problem.id];
+    if (!record) continue;
+    const item = toReviewItem(problem, record, today);
+    if (!record.localPass) {
+      unfinished.push(item);
+      continue;
+    }
+    if (item.overdueDays >= 0) due.push(item);
+    else if (item.overdueDays >= -7) upcoming.push(item);
+  }
+  due.sort((a, b) => b.overdueDays - a.overdueDays || a.problem.title.localeCompare(b.problem.title));
+  upcoming.sort((a, b) => b.overdueDays - a.overdueDays || a.problem.title.localeCompare(b.problem.title));
+  unfinished.sort((a, b) => b.overdueDays - a.overdueDays || a.problem.title.localeCompare(b.problem.title));
+  return { due, upcoming, unfinished };
+}
+
+export function isDueForReview(progress: Progress, problemId: string, today = todayStamp()): boolean {
+  return reviewSchedule(progress, today).due.some((item) => item.problem.id === problemId);
 }
 
 export function recommendedProblem(progress: Progress): Problem {

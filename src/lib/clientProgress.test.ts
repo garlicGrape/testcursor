@@ -27,6 +27,17 @@ describe("applyProgressAction", () => {
     expect(progress.solved["pair-sum"].localPass).toBe(false);
   });
 
+  it("does not pay streak or XP for a leftover review action", () => {
+    const { progress, extra } = applyProgressAction(
+      { ...emptyProgress(), streak: 4, lastActiveDate: "2026-08-20" },
+      { action: "review" },
+    );
+    expect(extra.awarded).toBe(false);
+    expect(progress.streak).toBe(4);
+    expect(progress.xp).toBe(0);
+    expect(progress.reviewCount).toBe(0);
+  });
+
   it("rejects unknown problems", () => {
     const { extra } = applyProgressAction(emptyProgress(), {
       action: "solve",

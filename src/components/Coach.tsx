@@ -26,6 +26,15 @@ const PATTERN_HINT: Record<string, string> = {
   "sql-window": "Keep the row, add RANK / LAG / running sum. PARTITION BY the group.",
 };
 
+const DRILLS = [
+  "Restate the input and the output in one sentence. What is one return value?",
+  "What's the brute force, and why is it too slow for the constraints?",
+  "Name the pattern and the invariant you will maintain while you scan.",
+  "Which edge case will the interviewer throw first?",
+  "Walk example 1 out loud before you touch the editor.",
+  "After it passes: time, extra space, and one follow-up. No code dump.",
+];
+
 function patternHit(problem: Problem, lower: string): boolean {
   return (
     lower.includes(problem.pattern.replace("sql-", "").replace("-", " ")) ||
@@ -72,6 +81,7 @@ export function Coach({
   const [draft, setDraft] = useState("");
   const [phase, setPhase] = useState<"intro" | "live">("intro");
   const [started, setStarted] = useState(false);
+  const [drill, setDrill] = useState(0);
 
   const failed = useMemo(() => (lastResults ?? []).filter((r) => !r.ok), [lastResults]);
   const passed = lastResults && lastResults.length > 0 && lastResults.every((r) => r.ok);
@@ -170,6 +180,12 @@ export function Coach({
     say("coach", `${expected} Don't name the LeetCode number. Name the technique, or paste what you think the failing case is doing.`);
   }
 
+  function askDrill() {
+    const q = DRILLS[drill % DRILLS.length];
+    setDrill((n) => n + 1);
+    say("coach", q);
+  }
+
   function submitLine() {
     const text = draft.trim();
     if (!text) return;
@@ -202,9 +218,14 @@ export function Coach({
           </button>
         )}
         {phase === "live" && (
-          <button type="button" onClick={() => diagnose(true)} className="rounded-md border border-paper/20 px-3 py-1.5 font-mono text-xs">
-            Interrogate my last Run
-          </button>
+          <>
+            <button type="button" onClick={() => diagnose(true)} className="rounded-md border border-paper/20 px-3 py-1.5 font-mono text-xs">
+              Interrogate my last Run
+            </button>
+            <button type="button" onClick={askDrill} className="rounded-md border border-paper/20 px-3 py-1.5 font-mono text-xs">
+              Ask me a question
+            </button>
+          </>
         )}
         {hintsOpen < problem.hints.length && (
           <button type="button" onClick={onUnlockHint} className="rounded-md border border-paper/20 px-3 py-1.5 font-mono text-xs">

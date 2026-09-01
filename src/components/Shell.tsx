@@ -9,6 +9,7 @@ import { useProgress } from "./ProgressProvider";
 const NAV = [
   { href: "/", label: "Board" },
   { href: "/practice", label: "Practice" },
+  { href: "/review", label: "Review" },
   { href: "/quests", label: "Quests" },
   { href: "/learn", label: "Patterns" },
   { href: "/resources", label: "Study" },

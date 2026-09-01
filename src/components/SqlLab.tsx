@@ -154,6 +154,9 @@ export function SqlLab({
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       void run(false);
     });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => {
+      void run(true);
+    });
   };
 
   if (!spec) {
@@ -173,7 +176,7 @@ export function SqlLab({
           {runtime === "ready" && "Ready · Run previews your result table"}
           {runtime === "error" && "Runtime issue — hit Run to retry"}
         </span>
-        <span className="ml-auto hidden font-mono text-[11px] text-paper/35 sm:inline">Ctrl/⌘ + Enter to run</span>
+        <span className="ml-auto hidden font-mono text-[11px] text-paper/35 sm:inline">Ctrl/⌘+Enter run · +Shift submit</span>
       </header>
       <div className="border-b border-violet-500/20 px-3 py-2">
         <SqlDataset spec={spec} defaultOpen />
@@ -190,6 +193,23 @@ export function SqlLab({
             wrap="off"
             aria-label="SQL editor"
             className="dojo-plain-editor"
+            onKeyDown={(e) => {
+              if (e.key === "Tab") {
+                e.preventDefault();
+                const t = e.currentTarget;
+                const start = t.selectionStart;
+                const end = t.selectionEnd;
+                const next = `${code.slice(0, start)}  ${code.slice(end)}`;
+                setCode(next);
+                requestAnimationFrame(() => {
+                  t.selectionStart = t.selectionEnd = start + 2;
+                });
+              }
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault();
+                void run(e.shiftKey);
+              }
+            }}
           />
         ) : (
           <Editor

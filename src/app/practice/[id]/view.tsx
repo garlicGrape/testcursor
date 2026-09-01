@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PROBLEM_BY_ID } from "@/data/problems";
 import { useProgress } from "@/components/ProgressProvider";
 import { CodeLab } from "@/components/CodeLab";
@@ -9,8 +9,10 @@ import { SqlLab } from "@/components/SqlLab";
 import { SqlDataset } from "@/components/SqlDataset";
 import { Coach } from "@/components/Coach";
 import { InterviewTimer } from "@/components/InterviewTimer";
+import { ScratchNotes } from "@/components/ScratchNotes";
 import { getSqlSpec } from "@/data/sqlSpecs";
 import { nextProblem } from "@/lib/game";
+import { writeLastProblemId } from "@/lib/lastProblem";
 import type { TestResult } from "@/lib/harness";
 
 export function ProblemView({ id }: { id: string }) {
@@ -46,6 +48,10 @@ export function ProblemView({ id }: { id: string }) {
     setLastResults(results);
     setLastError(error);
   }, []);
+
+  useEffect(() => {
+    writeLastProblemId(id);
+  }, [id]);
 
   if (!problem) {
     return <p className="text-paper/70">Unknown problem.</p>;
@@ -164,6 +170,7 @@ export function ProblemView({ id }: { id: string }) {
             <p className="mt-3 font-mono text-xs text-paper/50">No 1:1 LeetCode twin — the editor is the practice.</p>
           )}
         </section>
+        <ScratchNotes problemId={problem.id} />
         <section className="rounded-2xl border border-violet-500/25 bg-ink-900/70 p-5">
           <h2 className="font-display text-2xl">Hints</h2>
           <p className="mt-1 text-xs text-paper/50">Each hint cuts first-solve XP. Unlock one at a time.</p>

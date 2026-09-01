@@ -13,7 +13,11 @@ export default function QuestsPage() {
       <h1 className="font-display text-4xl">Daily quests</h1>
       <p className="mt-2 text-paper/65">
         Four things, every day. XP lands automatically when you Submit a passing solution or mark a guide studied —
-        there is no Claim button.
+        there is no Claim button. Overdue solves also live on{" "}
+        <Link href="/review" className="text-gold-400">
+          Review
+        </Link>
+        .
       </p>
       <ol className="mt-8 space-y-4">
         {quests.map((q, i) => {

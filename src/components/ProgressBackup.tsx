@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { emptyProgress } from "@/lib/game";
 import { PROGRESS_KEY, saveProgress } from "@/lib/clientProgress";
+import { LAST_PROBLEM_KEY } from "@/lib/lastProblem";
 import { useProgress } from "./ProgressProvider";
 import type { Progress } from "@/data/types";
 
@@ -45,6 +46,7 @@ export function ProgressBackup() {
   function reset() {
     if (!window.confirm("Erase XP, streak, and solves in this browser?")) return;
     window.localStorage.removeItem(PROGRESS_KEY);
+    window.localStorage.removeItem(LAST_PROBLEM_KEY);
     saveProgress(emptyProgress());
     void refresh();
     setNote("Progress cleared.");
