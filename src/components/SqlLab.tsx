@@ -7,6 +7,7 @@ import { runSqlCases, warmSql, type SqlRunOutcome } from "@/lib/sqlClient";
 import { makeSqlStarter, parseSqlSetup } from "@/lib/sqlPreview";
 import { SqlDataset } from "./SqlDataset";
 import { RunCompare } from "./DataTable";
+import { LabSplit, LabToolbar } from "./LabSplit";
 import type { TestResult } from "@/lib/harness";
 
 loader.config({
@@ -111,7 +112,7 @@ export function SqlLab({
     const el = hostRef.current;
     if (!el) return;
     const measure = () => {
-      const next = Math.max(280, Math.round(el.getBoundingClientRect().height));
+      const next = Math.max(120, Math.round(el.getBoundingClientRect().height));
       setEditorPx(next);
       monacoRef.current?.layout();
     };
@@ -169,7 +170,7 @@ export function SqlLab({
 
   return (
     <section className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto rounded-2xl border border-violet-500/25 bg-ink-900/80 xl:overflow-hidden">
-      <header className="flex flex-wrap items-center gap-2 border-b border-violet-500/20 px-4 py-2">
+      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-violet-500/20 px-4 py-2">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-gold-400">SQLite</span>
         <span className="font-mono text-[11px] text-paper/45">
           {runtime === "loading" && "Loading in-browser SQL (first time ~5s)…"}
@@ -178,119 +179,107 @@ export function SqlLab({
         </span>
         <span className="ml-auto hidden font-mono text-[11px] text-paper/35 sm:inline">Ctrl/⌘+Enter run · +Shift submit</span>
       </header>
-      <div className="border-b border-violet-500/20 px-3 py-2">
-        <SqlDataset spec={spec} defaultOpen />
+      <div className="max-h-40 shrink-0 overflow-y-auto border-b border-violet-500/20 px-3 py-2 xl:max-h-28">
+        <SqlDataset spec={spec} defaultOpen={false} />
       </div>
-      <div ref={hostRef} className="dojo-editor-host dojo-editor-host-sql">
-        {plain ? (
-          <textarea
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            spellCheck={false}
-            autoCapitalize="off"
-            autoCorrect="off"
-            autoComplete="off"
-            wrap="off"
-            aria-label="SQL editor"
-            className="dojo-plain-editor"
-            onKeyDown={(e) => {
-              if (e.key === "Tab") {
-                e.preventDefault();
-                const t = e.currentTarget;
-                const start = t.selectionStart;
-                const end = t.selectionEnd;
-                const next = `${code.slice(0, start)}  ${code.slice(end)}`;
-                setCode(next);
-                requestAnimationFrame(() => {
-                  t.selectionStart = t.selectionEnd = start + 2;
-                });
+      <LabSplit
+        top={
+          <div ref={hostRef} className="dojo-editor-host dojo-editor-host-sql">
+            {plain ? (
+              <textarea
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
+                autoComplete="off"
+                wrap="off"
+                aria-label="SQL editor"
+                className="dojo-plain-editor"
+                onKeyDown={(e) => {
+                  if (e.key === "Tab") {
+                    e.preventDefault();
+                    const t = e.currentTarget;
+                    const start = t.selectionStart;
+                    const end = t.selectionEnd;
+                    const next = `${code.slice(0, start)}  ${code.slice(end)}`;
+                    setCode(next);
+                    requestAnimationFrame(() => {
+                      t.selectionStart = t.selectionEnd = start + 2;
+                    });
+                  }
+                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                    e.preventDefault();
+                    void run(e.shiftKey);
+                  }
+                }}
+              />
+            ) : (
+              <Editor
+                height={editorPx}
+                defaultLanguage="sql"
+                theme="vs-dark"
+                value={code}
+                onChange={(value) => setCode(value ?? "")}
+                onMount={onMount}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 14,
+                  tabSize: 2,
+                  wordWrap: "off",
+                  automaticLayout: true,
+                  scrollBeyondLastLine: false,
+                  padding: { top: 12, bottom: 12 },
+                  fontFamily: "IBM Plex Mono, ui-monospace, monospace",
+                }}
+                loading={<p className="p-4 font-mono text-xs text-paper/50">Loading editor…</p>}
+              />
+            )}
+          </div>
+        }
+        bottom={
+          <div className="flex flex-col bg-ink-900 xl:h-full xl:overflow-hidden">
+            <LabToolbar
+              busy={busy}
+              peeked={peeked}
+              onPeekChange={onPeekChange}
+              onRun={() => void run(false)}
+              onSubmit={() => void run(true)}
+              onReset={() =>
+                setCode(makeSqlStarter(parseSqlSetup(spec.cases[0].setup), spec.cases[0].expected.columns))
               }
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                e.preventDefault();
-                void run(e.shiftKey);
-              }
-            }}
-          />
-        ) : (
-          <Editor
-            height={editorPx}
-            defaultLanguage="sql"
-            theme="vs-dark"
-            value={code}
-            onChange={(value) => setCode(value ?? "")}
-            onMount={onMount}
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              tabSize: 2,
-              wordWrap: "off",
-              automaticLayout: true,
-              scrollBeyondLastLine: false,
-              padding: { top: 12, bottom: 12 },
-              fontFamily: "IBM Plex Mono, ui-monospace, monospace",
-            }}
-            loading={<p className="p-4 font-mono text-xs text-paper/50">Loading editor…</p>}
-          />
-        )}
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto border-t border-violet-500/20 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void run(false)}
-            className="rounded-md border border-paper/20 px-3 py-1.5 font-mono text-xs disabled:opacity-40"
-          >
-            {busy ? "Running…" : "Run"}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void run(true)}
-            className="rounded-md bg-gold-400 px-3 py-1.5 font-mono text-xs text-ink-950 disabled:opacity-40"
-          >
-            Submit
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() =>
-              setCode(makeSqlStarter(parseSqlSetup(spec.cases[0].setup), spec.cases[0].expected.columns))
-            }
-            className="rounded-md px-3 py-1.5 font-mono text-xs text-paper/55"
-          >
-            Reset starter
-          </button>
-          <label className="ml-auto flex items-center gap-2 text-xs text-paper/60">
-            <input type="checkbox" checked={peeked} onChange={(e) => onPeekChange(e.target.checked)} />
-            Peeked at a solution (25% XP)
-          </label>
-        </div>
-        {outcome?.error && results.length === 0 && <p className="mt-3 font-mono text-xs text-ember">{outcome.error}</p>}
-        {passed && (
-          <p className="mt-3 font-mono text-sm text-gold-400">
-            Accepted · {results.length} check{results.length === 1 ? "" : "s"} passed
-          </p>
-        )}
-        {failed && (
-          <p className="mt-3 font-mono text-sm text-ember">
-            Wrong Answer · {results.filter((t) => t.ok).length}/{results.length} passed — extra columns are marked in
-            red
-          </p>
-        )}
-        {results.length > 0 && (
-          <ul className="mt-2 max-h-[min(28rem,55vh)] space-y-2 overflow-auto">
-            {results.map((t) => (
-              <RunCompare key={t.name} result={t} />
-            ))}
-          </ul>
-        )}
-        {note && <p className="mt-2 text-sm text-violet-300">{note}</p>}
-        {flash && <p className="mt-2 text-sm text-violet-300">{flash}</p>}
-        {alreadySolved && !flash && (
-          <p className="mt-2 font-mono text-[11px] text-paper/45">Already in your solved set — Submit still re-runs checks.</p>
-        )}
-      </div>
+            />
+            <div className="px-4 py-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
+              {outcome?.error && results.length === 0 && <p className="font-mono text-sm text-ember">{outcome.error}</p>}
+              {passed && (
+                <p className="font-mono text-sm text-gold-400">
+                  Accepted · {results.length} check{results.length === 1 ? "" : "s"} passed
+                </p>
+              )}
+              {failed && (
+                <p className="font-mono text-sm text-ember">
+                  Wrong Answer · {results.filter((t) => t.ok).length}/{results.length} passed — extra columns are marked
+                  in red
+                </p>
+              )}
+              {results.length > 0 && (
+                <ul className="mt-2 space-y-2">
+                  {results.map((t) => (
+                    <RunCompare key={t.name} result={t} />
+                  ))}
+                </ul>
+              )}
+              {note && <p className="mt-2 text-sm text-violet-300">{note}</p>}
+              {flash && <p className="mt-2 text-sm text-violet-300">{flash}</p>}
+              {alreadySolved && !flash && (
+                <p className="mt-2 font-mono text-[11px] text-paper/45">
+                  Already in your solved set — Submit still re-runs checks.
+                </p>
+              )}
+            </div>
+          </div>
+        }
+      />
     </section>
   );
 }

@@ -67,15 +67,10 @@ body {
 }
 
 @media (min-width: 1280px) {
-  .dojo-editor-host {
-    flex: 1 1 auto;
-    height: auto;
-    min-height: 20rem;
-  }
-
+  .dojo-editor-host,
   .dojo-editor-host-sql {
-    flex: 1 1 auto;
-    height: auto;
-    min-height: 16rem;
+    flex: none;
+    height: 100%;
+    min-height: 0;
   }
 }
