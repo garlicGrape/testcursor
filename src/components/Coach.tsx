@@ -26,6 +26,29 @@ const PATTERN_HINT: Record<string, string> = {
   "sql-window": "Keep the row, add RANK / LAG / running sum. PARTITION BY the group.",
 };
 
+function patternHit(problem: Problem, lower: string): boolean {
+  return (
+    lower.includes(problem.pattern.replace("sql-", "").replace("-", " ")) ||
+    lower.includes(problem.pattern) ||
+    (problem.pattern === "hashing" && /hash|map|dict|set|lookup/.test(lower)) ||
+    (problem.pattern === "two-pointers" && /two.?pointer|left.*right|slow.*fast/.test(lower)) ||
+    (problem.pattern === "sliding-window" && /window/.test(lower)) ||
+    (problem.pattern === "binary-search" && /binary|halv|predicate/.test(lower)) ||
+    (problem.pattern === "dp" && /dp|dynamic|state|kadane/.test(lower)) ||
+    (problem.pattern.startsWith("sql-joins") && /join|left|inner/.test(lower)) ||
+    (problem.pattern.startsWith("sql-agg") && /group|having|aggreg/.test(lower)) ||
+    (problem.pattern.startsWith("sql-window") && /rank|window|lag|over/.test(lower)) ||
+    (problem.pattern.startsWith("sql-select") && /where|select|filter/.test(lower)) ||
+    (problem.pattern === "stack" && /stack|rpn|monotonic/.test(lower)) ||
+    (problem.pattern === "linked-list" && /list|dummy|slow/.test(lower)) ||
+    (problem.pattern === "trees" && /tree|dfs|bfs|bst|height/.test(lower)) ||
+    (problem.pattern === "heaps" && /heap|kth|priority/.test(lower)) ||
+    (problem.pattern === "graphs" && /graph|bfs|dfs|island/.test(lower)) ||
+    (problem.pattern === "intervals" && /interval|merge|sweep/.test(lower)) ||
+    (problem.pattern === "backtracking" && /backtrack|recurse|subset|permut/.test(lower))
+  );
+}
+
 export function Coach({
   problem,
   lastResults,
@@ -43,11 +66,11 @@ export function Coach({
   const [msgs, setMsgs] = useState<Msg[]>([
     {
       who: "coach",
-      text: "I'm the mock interviewer. I will not paste a solution. Restate the problem, name a pattern, then code. If tests fail, I'll interrogate the failure — not fix it for you.",
+      text: "I'm the mock interviewer. I will not paste a solution. Restate the problem, name a pattern, then code. Keep talking — I read your hidden-test results. I will not dump the function.",
     },
   ]);
   const [draft, setDraft] = useState("");
-  const [phase, setPhase] = useState<"intro" | "pattern" | "code" | "grill">("intro");
+  const [phase, setPhase] = useState<"intro" | "live">("intro");
   const [started, setStarted] = useState(false);
 
   const failed = useMemo(() => (lastResults ?? []).filter((r) => !r.ok), [lastResults]);
@@ -62,82 +85,97 @@ export function Coach({
       setStarted(true);
       await startCoach();
     }
-    setPhase("pattern");
+    setPhase("live");
     say(
       "coach",
-      `We're doing "${problem.title}". 60 seconds: input/output, brute force, target complexity, pattern name. Type the pattern (or a one-line plan).`,
+      `We're doing "${problem.title}". 60 seconds: input/output, brute force, target complexity, pattern name. Type a plan, ask about a failing test, or say "complexity" after you pass.`,
     );
   }
 
-  function submitPlan() {
-    const text = draft.trim();
-    if (!text) return;
-    say("you", text);
-    setDraft("");
-    const lower = text.toLowerCase();
-    const expected = PATTERN_HINT[problem.pattern] ?? "Name the family of techniques, not the code.";
-    const hit =
-      lower.includes(problem.pattern.replace("sql-", "").replace("-", " ")) ||
-      lower.includes(problem.pattern) ||
-      (problem.pattern === "hashing" && /hash|map|dict|set|lookup/.test(lower)) ||
-      (problem.pattern === "two-pointers" && /two.?pointer|left.*right|slow.*fast/.test(lower)) ||
-      (problem.pattern === "sliding-window" && /window/.test(lower)) ||
-      (problem.pattern === "binary-search" && /binary|halv|predicate/.test(lower)) ||
-      (problem.pattern === "dp" && /dp|dynamic|state|kadane/.test(lower)) ||
-      (problem.pattern.startsWith("sql-joins") && /join|left|inner/.test(lower)) ||
-      (problem.pattern.startsWith("sql-agg") && /group|having|aggreg/.test(lower)) ||
-      (problem.pattern.startsWith("sql-window") && /rank|window|lag|over/.test(lower)) ||
-      (problem.pattern.startsWith("sql-select") && /where|select|filter/.test(lower)) ||
-      (problem.pattern === "stack" && /stack|rpn|monotonic/.test(lower)) ||
-      (problem.pattern === "linked-list" && /list|dummy|slow/.test(lower)) ||
-      (problem.pattern === "trees" && /tree|dfs|bfs|bst|height/.test(lower)) ||
-      (problem.pattern === "heaps" && /heap|kth|priority/.test(lower)) ||
-      (problem.pattern === "graphs" && /graph|bfs|dfs|island/.test(lower)) ||
-      (problem.pattern === "intervals" && /interval|merge|sweep/.test(lower)) ||
-      (problem.pattern === "backtracking" && /backtrack|recurse|subset|permut/.test(lower));
-    if (hit) {
-      say("coach", `Good — that family is on the table. ${expected} Now code in the editor. Run tests. Come back if a case fails.`);
-      setPhase("code");
-    } else {
-      say(
-        "coach",
-        `Not buying it yet. ${expected} Don't name the LeetCode number. Name the technique, then try again (or start coding and I'll judge from the tests).`,
-      );
-      setPhase("code");
-    }
-  }
-
-  function diagnose() {
+  function diagnose(announceYou = true) {
     if (lastError) {
-      say("you", "The runtime exploded.");
+      if (announceYou) say("you", "The runtime exploded.");
       say(
         "coach",
-        `That's a crash, not a wrong answer. Read the first line of the error: "${lastError.slice(0, 180)}". Syntax, NameError, and indentation are not algorithm bugs — fix the language, then rerun.`,
+        `That's a crash, not a wrong answer. Read the first line: "${lastError.slice(0, 180)}". Syntax and NameError are language bugs — fix those, then rerun.`,
       );
       return;
     }
     if (!lastResults || lastResults.length === 0) {
-      say("coach", "I haven't seen a Run yet. Hit Run so I have a failing case to interrogate.");
+      say("coach", "I haven't seen a Run yet. Hit Run so I have a case to interrogate.");
       return;
     }
     if (passed) {
-      setPhase("grill");
-      say("you", "Tests passed.");
+      if (announceYou) say("you", "Tests passed.");
       say(
         "coach",
-        `Accepted. Now say time and space in one sentence. Then a follow-up: ${problem.interviewNote}`,
+        `Accepted. Say time and space in one sentence. Then a follow-up: ${problem.interviewNote}`,
       );
       return;
     }
     const first = failed[0];
-    say("you", `Stuck. ${lastResults.filter((r) => r.ok).length}/${lastResults.length} passed.`);
+    if (announceYou) say("you", `Stuck. ${lastResults.filter((r) => r.ok).length}/${lastResults.length} passed.`);
     say(
       "coach",
       `Look at "${first.name}". got ${first.got} — want ${first.want}. What assumption did you make that this case violates? Don't change code until you can say it out loud.`,
     );
     if (hintsOpen < problem.hints.length) {
-      say("coach", "If you want a nudge after that, unlock one hint on the left — it costs first-solve XP. I will not dump the function.");
+      say("coach", "Need a nudge after that? Unlock one hint — it costs first-solve XP. I still will not dump the function.");
     }
+  }
+
+  function reply(text: string) {
+    const lower = text.toLowerCase();
+    const expected = PATTERN_HINT[problem.pattern] ?? "Name the family of techniques, not the code.";
+
+    if (/^(hint|nudge|stuck|help)\b/.test(lower) || /\bhint\b/.test(lower)) {
+      if (hintsOpen < problem.hints.length) {
+        onUnlockHint();
+        say("coach", `Hint ${hintsOpen + 1} is now unlocked on the left. Read it, then tell me what it changes in your plan. I still will not write the code.`);
+      } else {
+        say("coach", "You're out of canned hints. Walk the failing case by hand on one example. What value is wrong?");
+      }
+      return;
+    }
+
+    if (/\b(fail|failed|wrong|test|run|wa|error|traceback)\b/.test(lower)) {
+      diagnose(false);
+      return;
+    }
+
+    if (/\b(complex|big-?o|o\(|time and space|runtime)\b/.test(lower)) {
+      if (problem.kind === "sql") {
+        say("coach", "For SQL, say the grain, the join type, and whether you scan once or explode rows. Indexes are a follow-up, not an excuse to skip the predicate.");
+      } else {
+        say("coach", "Say time and extra memory in one sentence, then the brute force you beat. If you cannot name the bottleneck, you are not done.");
+      }
+      return;
+    }
+
+    if (/\b(brute|naive|follow-?up|edge|constraint)\b/.test(lower)) {
+      say("coach", problem.interviewNote);
+      return;
+    }
+
+    if (/\b(solution|give me the code|write it|answer is)\b/.test(lower)) {
+      say("coach", "No. Restate the invariant. If tests failed, interrogate the first FAIL. If they passed, quote complexity.");
+      return;
+    }
+
+    if (patternHit(problem, lower)) {
+      say("coach", `Good — that family is on the table. ${expected} Code in the editor. Run. If a case fails, tell me or hit Interrogate.`);
+      return;
+    }
+
+    say("coach", `${expected} Don't name the LeetCode number. Name the technique, or paste what you think the failing case is doing.`);
+  }
+
+  function submitLine() {
+    const text = draft.trim();
+    if (!text) return;
+    say("you", text);
+    setDraft("");
+    reply(text);
   }
 
   return (
@@ -163,8 +201,8 @@ export function Coach({
             Start mock interview
           </button>
         )}
-        {(phase === "code" || phase === "grill") && (
-          <button type="button" onClick={diagnose} className="rounded-md border border-paper/20 px-3 py-1.5 font-mono text-xs">
+        {phase === "live" && (
+          <button type="button" onClick={() => diagnose(true)} className="rounded-md border border-paper/20 px-3 py-1.5 font-mono text-xs">
             Interrogate my last Run
           </button>
         )}
@@ -174,18 +212,18 @@ export function Coach({
           </button>
         )}
       </div>
-      {phase === "pattern" && (
+      {phase === "live" && (
         <form
           className="mt-3 flex gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            submitPlan();
+            submitLine();
           }}
         >
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Pattern + target complexity…"
+            placeholder="Plan, complexity, or ask about a failing test…"
             className="min-w-0 flex-1 rounded-md border border-violet-500/30 bg-ink-950 px-3 py-2 font-mono text-sm"
           />
           <button type="submit" className="rounded-md bg-gold-400 px-3 py-2 font-mono text-xs text-ink-950">

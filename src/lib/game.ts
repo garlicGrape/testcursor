@@ -217,6 +217,9 @@ export function dailyQuests(progress: Progress, today = todayStamp()): DailyQues
   const solvedIds = Object.keys(progress.solved);
   const reviewId = solvedIds.length ? solvedIds[seed % solvedIds.length] : pick.id;
   const reviewProblem = PROBLEMS.find((p) => p.id === reviewId) ?? pick;
+  const sqlPool = PROBLEMS.filter((p) => p.kind === "sql" && !progress.solved[p.id]);
+  const sqlAll = PROBLEMS.filter((p) => p.kind === "sql");
+  const sqlPick = (sqlPool.length ? sqlPool : sqlAll)[seed % (sqlPool.length ? sqlPool.length : sqlAll.length)];
 
   return [
     {
@@ -226,6 +229,14 @@ export function dailyQuests(progress: Progress, today = todayStamp()): DailyQues
       detail: `${pick.difficulty} · ${pick.pattern.replace("-", " ")} · ${pick.xp} XP`,
       xp: 30,
       href: `/practice/${pick.id}`,
+    },
+    {
+      id: `sql-${today}`,
+      kind: "solve",
+      title: `SQL: ${sqlPick.title}`,
+      detail: `${sqlPick.difficulty} · ${sqlPick.pattern.replace("sql-", "sql ")} · hidden result sets`,
+      xp: 30,
+      href: `/practice/${sqlPick.id}`,
     },
     {
       id: `study-${today}`,

@@ -85,11 +85,13 @@ describe("recordSolve", () => {
 });
 
 describe("daily quests", () => {
-  it("returns three stable quests for a given day", () => {
+  it("returns four stable quests for a given day including a SQL drill", () => {
     const a = dailyQuests(emptyProgress(), "2026-08-22");
     const b = dailyQuests(emptyProgress(), "2026-08-22");
-    expect(a).toHaveLength(3);
+    expect(a).toHaveLength(4);
     expect(a.map((q) => q.id)).toEqual(b.map((q) => q.id));
+    expect(a.some((q) => q.id.startsWith("sql-"))).toBe(true);
+    expect(a.find((q) => q.id.startsWith("sql-"))?.href).toMatch(/\/practice\/sql-/);
   });
 });
 
@@ -122,5 +124,12 @@ describe("user interview sheet", () => {
         "Number of no contiguous substring matches",
       ]),
     );
+  });
+
+  it("ships a large python catalog plus a SQL interview track", () => {
+    const sql = PROBLEMS.filter((p) => p.kind === "sql");
+    const python = PROBLEMS.filter((p) => (p.kind ?? "python") === "python");
+    expect(python.length).toBeGreaterThanOrEqual(70);
+    expect(sql.length).toBeGreaterThanOrEqual(24);
   });
 });

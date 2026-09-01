@@ -257,6 +257,178 @@ INSERT INTO Examinations VALUES
       orderMatters: true,
     },
   ]),
+  "sql-emp-vs-manager": spec("SELECT -- name\n", [
+    {
+      name: "example",
+      setup: `CREATE TABLE Employee (id INT, name TEXT, salary INT, managerId INT);
+INSERT INTO Employee VALUES (1,'Joe',70000,3),(2,'Henry',80000,4),(3,'Sam',60000,NULL),(4,'Max',90000,NULL);`,
+      expected: { columns: ["name"], rows: [["Joe"]] },
+    },
+  ]),
+  "sql-never-order": spec("SELECT -- Customers\n", [
+    {
+      name: "example",
+      setup: `CREATE TABLE Customers (id INT, name TEXT);
+CREATE TABLE Orders (id INT, customerId INT);
+INSERT INTO Customers VALUES (1,'Joe'),(2,'Henry'),(3,'Sam'),(4,'Max');
+INSERT INTO Orders VALUES (1,3),(2,1);`,
+      expected: { columns: ["Customers"], rows: [["Henry"], ["Max"]] },
+    },
+  ]),
+  "sql-classes-five": spec("SELECT -- class\n", [
+    {
+      name: "example",
+      setup: `CREATE TABLE Courses (student TEXT, class TEXT);
+INSERT INTO Courses VALUES
+  ('A','Math'),('B','English'),('C','Math'),('D','Biology'),('E','Math'),
+  ('F','Computer'),('G','Math'),('H','Math'),('I','Math');`,
+      expected: { columns: ["class"], rows: [["Math"]] },
+    },
+  ]),
+  "sql-employee-bonus": spec("SELECT -- name, bonus\n", [
+    {
+      name: "example",
+      setup: `CREATE TABLE Employee (empId INT, name TEXT, supervisor INT, salary INT);
+CREATE TABLE Bonus (empId INT, bonus INT);
+INSERT INTO Employee VALUES (1,'John',3,1000),(2,'Dan',3,2000),(3,'Brad',NULL,4000),(4,'Thomas',3,4000);
+INSERT INTO Bonus VALUES (2,500),(4,2000);`,
+      expected: {
+        columns: ["name", "bonus"],
+        rows: [
+          ["John", null],
+          ["Dan", 500],
+          ["Brad", null],
+        ],
+      },
+    },
+  ]),
+  "sql-no-trans": spec("SELECT -- customer_id, count_no_trans\n", [
+    {
+      name: "example",
+      setup: `CREATE TABLE Visits (visit_id INT, customer_id INT);
+CREATE TABLE Transactions (transaction_id INT, visit_id INT, amount INT);
+INSERT INTO Visits VALUES (1,23),(2,9),(4,30),(5,54),(6,96),(7,54),(8,54);
+INSERT INTO Transactions VALUES (2,5,310),(3,5,300),(9,5,200),(12,1,910),(13,2,970);`,
+      expected: {
+        columns: ["customer_id", "count_no_trans"],
+        rows: [
+          [30, 1],
+          [96, 1],
+          [54, 2],
+        ],
+      },
+    },
+  ]),
+  "sql-unique-id": spec("SELECT -- unique_id, name\n", [
+    {
+      name: "example",
+      setup: `CREATE TABLE Employees (id INT, name TEXT);
+CREATE TABLE EmployeeUNI (id INT, unique_id INT);
+INSERT INTO Employees VALUES (1,'Alice'),(7,'Bob'),(11,'Meir'),(2,'Winston'),(3,'Jonathan');
+INSERT INTO EmployeeUNI VALUES (3,1),(11,2),(7,3);`,
+      expected: {
+        columns: ["unique_id", "name"],
+        rows: [
+          [null, "Alice"],
+          [3, "Bob"],
+          [2, "Meir"],
+          [null, "Winston"],
+          [1, "Jonathan"],
+        ],
+      },
+    },
+  ]),
+  "sql-followers": spec("SELECT -- user_id, followers_count\n", [
+    {
+      name: "example",
+      setup: `CREATE TABLE Followers (user_id INT, follower_id INT);
+INSERT INTO Followers VALUES (0,1),(1,0),(2,0),(2,1);`,
+      expected: {
+        columns: ["user_id", "followers_count"],
+        rows: [
+          [0, 1],
+          [1, 1],
+          [2, 2],
+        ],
+      },
+      orderMatters: true,
+    },
+  ]),
+  "sql-triangle": spec("SELECT -- x, y, z, triangle\n", [
+    {
+      name: "example",
+      setup: `CREATE TABLE Triangle (x INT, y INT, z INT);
+INSERT INTO Triangle VALUES (13,15,30),(10,20,15);`,
+      expected: {
+        columns: ["x", "y", "z", "triangle"],
+        rows: [
+          [13, 15, 30, "No"],
+          [10, 20, 15, "Yes"],
+        ],
+      },
+    },
+  ]),
+  "sql-fix-names": spec("SELECT -- user_id, name\n", [
+    {
+      name: "example",
+      setup: `CREATE TABLE Users (user_id INT, name TEXT);
+INSERT INTO Users VALUES (1,'aLice'),(2,'bOB');`,
+      expected: {
+        columns: ["user_id", "name"],
+        rows: [
+          [1, "Alice"],
+          [2, "Bob"],
+        ],
+      },
+      orderMatters: true,
+    },
+  ]),
+  "sql-patients": spec("SELECT -- patient_id, patient_name, conditions\n", [
+    {
+      name: "prefix not substring",
+      setup: `CREATE TABLE Patients (patient_id INT, patient_name TEXT, conditions TEXT);
+INSERT INTO Patients VALUES
+  (1,'Daniel','YFEV COUGH'),
+  (2,'Alice',''),
+  (3,'Bob','DIAB100 MYOP'),
+  (4,'George','ACNE DIAB100'),
+  (5,'Alain','DIAB201'),
+  (6,'Sam','SADIAB100');`,
+      expected: {
+        columns: ["patient_id", "patient_name", "conditions"],
+        rows: [
+          [3, "Bob", "DIAB100 MYOP"],
+          [4, "George", "ACNE DIAB100"],
+        ],
+      },
+    },
+  ]),
+  "sql-consecutive": spec("SELECT -- ConsecutiveNums\n", [
+    {
+      name: "example",
+      setup: `CREATE TABLE Logs (id INT, num INT);
+INSERT INTO Logs VALUES (1,1),(2,1),(3,1),(4,2),(5,1),(6,2),(7,2);`,
+      expected: { columns: ["ConsecutiveNums"], rows: [[1]] },
+    },
+  ]),
+  "sql-exchange-seats": spec("SELECT -- id, student\n", [
+    {
+      name: "odd leftover",
+      setup: `CREATE TABLE Seat (id INT, student TEXT);
+INSERT INTO Seat VALUES (1,'Abbot'),(2,'Doris'),(3,'Emerson'),(4,'Green'),(5,'Jeames');`,
+      expected: {
+        columns: ["id", "student"],
+        rows: [
+          [1, "Doris"],
+          [2, "Abbot"],
+          [3, "Green"],
+          [4, "Emerson"],
+          [5, "Jeames"],
+        ],
+      },
+      orderMatters: true,
+    },
+  ]),
 };
 
 export function getSqlSpec(id: string): SqlSpec | undefined {

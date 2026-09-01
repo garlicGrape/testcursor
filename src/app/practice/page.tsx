@@ -14,8 +14,13 @@ export default function PracticePage() {
   const [list, setList] = useState<"all" | "user" | "core" | "sql">("all");
   const [status, setStatus] = useState<"all" | "todo" | "done">("all");
   const [kind, setKind] = useState<ProblemKind | "all">("all");
+  const [q, setQ] = useState("");
+
+  const pythonCount = PROBLEMS.filter((p) => (p.kind ?? "python") === "python").length;
+  const sqlCount = PROBLEMS.filter((p) => p.kind === "sql").length;
 
   const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
     return PROBLEMS.filter((p) => {
       if (difficulty !== "all" && p.difficulty !== difficulty) return false;
       if (pattern !== "all" && p.pattern !== pattern) return false;
@@ -23,21 +28,31 @@ export default function PracticePage() {
       if (list === "core" && (p.fromUserList || p.kind === "sql")) return false;
       if (list === "sql" && p.kind !== "sql") return false;
       if (kind !== "all" && (p.kind ?? "python") !== kind) return false;
+      if (needle) {
+        const hay = `${p.title} ${p.id} ${p.pattern} ${p.summary}`.toLowerCase();
+        if (!hay.includes(needle)) return false;
+      }
       const done = Boolean(progress.solved[p.id]);
       if (status === "todo" && done) return false;
       if (status === "done" && !done) return false;
       return true;
     });
-  }, [difficulty, kind, list, pattern, progress.solved, status]);
+  }, [difficulty, kind, list, pattern, progress.solved, q, status]);
 
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-4xl">Practice</h1>
       <p className="mt-2 max-w-2xl text-paper/65">
-        Open a problem and write Python or SQL in the editor — hidden tests run in the browser. Submit banks XP only
-        when every check passes. Use the mock interviewer on the problem page.
+        {PROBLEMS.length} runnable problems ({pythonCount} Python · {sqlCount} SQL). Write in the editor — hidden tests
+        run in the browser. Submit banks XP only when every check passes. Use the mock interviewer on the problem page.
       </p>
       <div className="mt-6 flex flex-wrap gap-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search title or pattern…"
+          className="min-w-[12rem] flex-1 rounded-md border border-violet-500/30 bg-ink-900 px-3 py-2 font-mono text-sm sm:max-w-xs"
+        />
         <select
           className="rounded-md border border-violet-500/30 bg-ink-900 px-3 py-2 font-mono text-sm"
           value={kind}
@@ -89,7 +104,10 @@ export default function PracticePage() {
           <option value="done">Solved</option>
         </select>
       </div>
-      <ul className="mt-6 divide-y divide-violet-500/15 rounded-2xl border border-violet-500/20 bg-ink-900/60">
+      <p className="mt-4 font-mono text-[11px] uppercase tracking-wider text-paper/45">
+        Showing {rows.length} / {PROBLEMS.length}
+      </p>
+      <ul className="mt-3 divide-y divide-violet-500/15 rounded-2xl border border-violet-500/20 bg-ink-900/60">
         {rows.map((p) => {
           const done = Boolean(progress.solved[p.id]);
           return (
